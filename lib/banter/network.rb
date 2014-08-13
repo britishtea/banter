@@ -1,3 +1,4 @@
+require "banter/selectable_queue"
 # require "irc/rfc2812/message"
 require "socket"
 require "thread_safe"
@@ -11,9 +12,6 @@ module IRC
 end
 
 module Banter
-  # TODO: Implement SelectableQueue
-  class SelectableQueue; end
-
   # Public: Represents a network.
   class Network
     StoppedHandling = Class.new(RuntimeError)
