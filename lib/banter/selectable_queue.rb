@@ -31,6 +31,12 @@ module Banter
       @queue.size
     end
 
+    def selected_for_reading
+    end
+
+    def selected_for_writing
+    end
+
     def to_io
       @read
     end

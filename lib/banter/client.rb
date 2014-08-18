@@ -1,10 +1,7 @@
-# require "banter/eventloop"
+require "banter/event_loop"
 require "banter/network"
 
 module Banter
-  # TODO: Implement Banter::EventLoop.
-  EventLoop = Class.new
-
   class Client
     # Public: Gets the Array of registered Networks.
     attr_reader :networks
@@ -12,7 +9,7 @@ module Banter
     # Public: Initializes the client.
     def initialize
       @networks  = Array.new
-      @eventloop = EventLoop.new
+      @eventloop = EventLoop.new self.networks
     end
 
     # Public: Registers a network with the client.
@@ -42,7 +39,7 @@ module Banter
 
     # Public: Connects all networks.
     def start!
-      @eventloop.start self.networks
+      @eventloop.start
     end
 
     # Public: Disconnects all networks.

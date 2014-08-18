@@ -3,7 +3,14 @@ require "banter/network"
 
 $plugin = proc { |*args| $test = args }
 
-setup { Banter::Network.new "irc://0.0.0.0:6667", :key => "value" }
+begin
+  $port   = 4000
+  $server = TCPServer.new $port
+rescue
+  $port = $port.succ and retry
+end
+
+setup { Banter::Network.new "irc://0.0.0.0:#{$port}", :key => "value" }
 
 prepare { $test = nil }
 
@@ -11,7 +18,7 @@ prepare { $test = nil }
 # Attributes
 
 test "getting the URI" do |network|
-  assert_equal network.uri, URI("irc://0.0.0.0:6667")
+  assert_equal network.uri, URI("irc://0.0.0.0:#{$port}")
 end
 
 test "getting the settings" do |network|
@@ -30,10 +37,6 @@ end
 
 test "getting the queue" do |network|
   assert_equal network.queue.class, Banter::SelectableQueue
-end
-
-test "getting the buffer String" do |network|
-  assert_equal network.buffer.class, String
 end
 
 
@@ -113,6 +116,201 @@ test "handling a message when #stop_handling! has been called" do |network|
     network.handle_message "hello"
   end
 end
+
+
+# Sockets
+
+# TODO: All networking should probably extracted into a Connection class.
+
+test "connection status before connecting" do |network|
+  assert_equal network.connected?, false
+end
+
+test "connecting" do |network|
+  client = Thread.new { $server.accept }
+  network.connect
+  client.join
+
+  IO.select nil, [network] # wait until connected
+  assert_equal network.connect, true
+
+  client.value.close
+end
+
+test "connection status after connecting" do |network|
+  client = Thread.new { $server.accept }
+  network.connect
+  client.join
+
+  IO.select nil, [network] # wait until connected
+  network.connect
+
+  assert_equal network.connected?, true
+
+  client.value.close 
+end
+
+
+test "disconnecting" do |network|
+  client = Thread.new { $server.accept }
+
+  network.connect
+  IO.select nil, [network]
+  network.disconnect
+
+  assert client.value.eof?
+end
+
+test "connection status after disconnecting" do |network|
+  client = Thread.new { $server.accept }
+
+  network.connect
+  IO.select nil, [network]
+  network.disconnect
+
+  assert client.value.eof?
+  assert_equal network.connected?, false
+end
+
+# test "reading from a socket with no data" do |network|
+#   client = Thread.new { $server.accept }
+#   network.connect
+#   client.join
+
+#   assert_equal network.read, []
+
+#   client.value.close
+# end
+
+# test "reading from a socket with data" do |network|
+#   client = Thread.new { $server.accept }
+#   network.connect
+#   client.join
+
+#   client.value.write ":prefix PRIVMSG banter :Hello\n"
+#   IO.select [network]
+  
+#   assert_equal network.read, [":prefix PRIVMSG banter :Hello\n"]
+
+#   client.value.close
+# end
+
+# test "reading from a socket with partial data" do |network|
+#   client = Thread.new { $server.accept }
+#   network.connect
+#   client.join
+  
+#   client.value.write ":prefix PRIVMSG banter :Hell"
+#   IO.select [network]
+  
+#   assert_equal network.read, nil
+
+#   client.value.write "o\n"
+#   IO.select [network]
+
+#   assert_equal network.read, [":prefix PRIVMSG banter :Hello\n"]
+
+#   client.value.close
+# end
+
+# test "reading from a closed socket" do |network|
+#   client    = Thread.new { $server.accept }
+#   connected = network.connect
+
+#   unless connected
+#     IO.select nil, [network]
+#     network.connect
+#   end
+
+#   client.value.close
+#   IO.select [network], nil, nil, 0
+
+#   # TODO: I think an exception should be raised here.
+#   assert_equal network.read, []
+# end
+
+# test "connection status after reading from a closed socket" do |network|
+#   client    = Thread.new { $server.accept }
+#   connected = network.connect
+
+#   unless connected
+#     IO.select nil, [network]
+#     network.connect
+#   end
+  
+#   client.value.close
+#   IO.select [network], nil, nil, 0
+#   network.read rescue
+
+#   assert_equal network.connected?, false
+# end
+
+# test "writing" do |network|
+#   client    = Thread.new { $server.accept }
+#   connected = network.connect
+
+#   unless connected
+#     IO.select nil, [network]
+#     network.connect
+#   end
+
+#   read = Thread.new do
+#     IO.select [client.value], nil, nil, 3
+#     client.value.read_nonblock(3)
+#   end
+  
+#   IO.select nil, [network], nil, 0
+  
+#   assert network.write("hey")
+# end
+
+# TODO: Add tests for writing to closed/broken/disconnected sockets.
+
+# test "writing to a closed socket" do |network|
+
+#   client    = Thread.new { $server.accept }
+#   connected = network.connect
+
+#   unless connected
+#     IO.select nil, [network]
+#     network.connect
+#   end
+
+#   client.value.close_read
+#   client.value.close_write
+
+#   GC.start
+#   IO.select nil, [network]
+
+#   # A closed socket is detected only AFTER a write.
+#   assert_equal network.write("hey"), true
+  
+#   # It isn't garantueed that the next write will fail, but one eventually will.
+#   begin
+#     IO.select nil, [network]
+#     assert_equal network.write("hey"), false
+#   rescue Cutest::AssertionFailed
+#     sleep 1
+#     retry
+#   end
+# end
+
+# test "connection status after writing to a closed socket" do |network|
+#   client    = Thread.new { $server.accept }
+#   connected = network.connect
+
+#   unless connected
+#     IO.select nil, [network]
+#     network.connect
+#   end
+
+#   client.value.close
+#   IO.select nil, [network], nil, 0
+#   network.write "hey" # first time we won't notice.
+#   network.write "hey"
+
+#   assert_equal network.connected?, false
+# end
 
 
 # Conversions

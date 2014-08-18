@@ -43,3 +43,11 @@ test "selecting on an emptied queue" do |queue|
 
   assert_equal r, nil
 end
+
+test "selected for reading" do |queue|
+  assert queue.respond_to? :selected_for_reading
+end
+
+test "selected for writing" do |queue|
+  assert queue.respond_to? :selected_for_writing
+end
