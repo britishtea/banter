@@ -168,6 +168,8 @@ module Banter
     rescue Errno::EISCONN
       puts "      Connected!" if $DEBUG
 
+      self.plugins.each { |plugin| plugin.call :connect, self }
+
       return @connected = true
     rescue Errno::EINPROGRESS
       return false
@@ -180,6 +182,8 @@ module Banter
       self.socket.close
     rescue IOError # Stream was already closed.
     ensure
+      self.plugins.each { |plugin| plugin.call :disconnect, self }
+
       @connected = false
     end
 

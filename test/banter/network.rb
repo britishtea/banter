@@ -127,12 +127,14 @@ test "connection status before connecting" do |network|
 end
 
 test "connecting" do |network|
+  network.register $plugin
   client = Thread.new { $server.accept }
   network.connect
   client.join
 
   IO.select nil, [network] # wait until connected
   assert_equal network.connect, true
+  assert_equal $test, [:connect, network]
 
   client.value.close
 end
@@ -152,6 +154,7 @@ end
 
 
 test "disconnecting" do |network|
+  network.register $plugin
   client = Thread.new { $server.accept }
 
   network.connect
@@ -159,6 +162,7 @@ test "disconnecting" do |network|
   network.disconnect
 
   assert client.value.eof?
+  assert_equal $test, [:disconnect, network]
 end
 
 test "connection status after disconnecting" do |network|
