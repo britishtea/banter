@@ -82,9 +82,12 @@ module Banter
         raise ArgumentError, "#{plugin}#call not implemented"
       end
 
+      self.settings[plugin].merge! settings
+
       begin
         plugin.call :register, self
       rescue
+        self.settings.delete plugin
         return false
       end
 
