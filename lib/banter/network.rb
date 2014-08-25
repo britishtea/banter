@@ -125,21 +125,33 @@ module Banter
       IRC::RFC2812::Message.new message
     end
 
-    # Public: Calls all plugins concurrently and passes them a message.
+    # Public: Calls all plugins with `event` and `message`.
     #
     # event   - An event name Symbol.
     # message - A message String (default: nil).
     #
     # Raises RunTimeError if #stop_handling! called after #wait has been called.
-    def handle_message(message)
+    def handle_event(event, message = nil)
+      if @thgroup.enclosed?
+        raise StoppedHandling, "waiting for plugins to finish"
+      end
+
+      self.plugins.each { |plugin| plugin.call event, self, message }
+    end
+
+    # Public: Calls all plugins concurrently with `event` and `message`.
+    #
+    # event   - An event name Symbol.
+    # message - A message String (default: nil).
+    #
+    # Raises RunTimeError if #stop_handling! called after #wait has been called.
+    def handle_event_concurrently(event, message = nil)
       if @thgroup.enclosed?
         raise StoppedHandling, "waiting for plugins to finish"
       end
 
       self.plugins.each do |plugin|
-        @thgroup.add Thread.new { 
-          plugin.call :receive, self, self.parse_message(message)
-        }
+        @thgroup.add Thread.new { plugin.call event, self, message }
       end
     end
 
@@ -171,7 +183,7 @@ module Banter
     rescue Errno::EISCONN
       puts "      Connected!" if $DEBUG
 
-      self.plugins.each { |plugin| plugin.call :connect, self }
+      self.handle_event :connect
 
       return @connected = true
     rescue Errno::EINPROGRESS
@@ -185,7 +197,7 @@ module Banter
       self.socket.close
     rescue IOError # Stream was already closed.
     ensure
-      self.plugins.each { |plugin| plugin.call :disconnect, self }
+      self.handle_event :disconnect
 
       @connected = false
     end
@@ -200,7 +212,9 @@ module Banter
     # Public: Calls #handle_message for every received line (if connected).
     def selected_for_reading
       if self.connected?
-        read.each { |line| self.handle_message line }
+        read.each do |line|
+          self.handle_event_concurrently :receive, self.parse_message(line)
+        end
       end
     end
 

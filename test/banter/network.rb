@@ -55,9 +55,10 @@ test "registering a plugin" do |network|
 end
 
 test "registering a plugin with settings" do |network|
-  network.register $plugin, :key => "value"
+  plugin = proc { |_, network| $test = network.settings[plugin] }
+  network.register plugin, :key => "value"
 
-  assert_equal network.settings[$plugin], ThreadSafe::Hash.new(:key => "value")
+  assert_equal $test, ThreadSafe::Hash.try_convert(:key => "value")
 end
 
 test "registering a plugin twice" do |network|
@@ -91,30 +92,37 @@ test "unregistering an unregistered plugin" do |network|
 end
 
 
-# Message handling
-
 test "parsing messages" do |network|
   msg = ":prefix PRIVMSG #channel :Hello"
 
   assert_equal network.parse_message(msg), IRC::RFC2812::Message.new(msg)
 end
 
-test "handling a message" do |network|
-  msg = ":prefix PRIVMSG #channel :Hello"
+# Handling events
 
+test "handling an event" do |network|
+  message = ":prefix PRIVMSG #channel :Hello"
   network.register $plugin
-  network.handle_message msg
-  network.stop_handling!
+  network.handle_event :receive, message
 
-  assert_equal $test, [:receive, network, IRC::RFC2812::Message.new(msg)]
+  assert_equal $test, [:receive, network, message]
 end
 
-test "handling a message when #stop_handling! has been called" do |network|
+test "handling an event when #stop_handling! has been called" do |network|
   network.stop_handling!
 
   assert_raise Banter::Network::StoppedHandling do
-    network.handle_message "hello"
+    network.handle_event :receive, "hello"
   end
+end
+
+test "handling an event concurrently" do |network|
+  message = ":prefix PRIVMSG #channel :Hello"
+  network.register $plugin
+  network.handle_event_concurrently :receive, message
+  network.stop_handling!
+
+  assert_equal $test, [:receive, network, message]
 end
 
 
@@ -134,7 +142,7 @@ test "connecting" do |network|
 
   IO.select nil, [network] # wait until connected
   assert_equal network.connect, true
-  assert_equal $test, [:connect, network]
+  assert_equal $test, [:connect, network, nil]
 
   client.value.close
 end
@@ -162,7 +170,7 @@ test "disconnecting" do |network|
   network.disconnect
 
   assert client.value.eof?
-  assert_equal $test, [:disconnect, network]
+  assert_equal $test, [:disconnect, network, nil]
 end
 
 test "connection status after disconnecting" do |network|
