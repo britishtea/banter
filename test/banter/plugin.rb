@@ -85,7 +85,7 @@ test "running a block per event" do |plugin|
   plugin.event(:event)       { |*args| $test = [:event, args]  }
   plugin.event(:other_event) { |*args| $test = [:other_event, args] }
 
-  assert_equal $test, [:event, ["args"]] 
+  assert_equal $test, [:event, ["args"]]
 end
 
 test "working with irc-helpers" do |plugin|
@@ -99,6 +99,12 @@ test "sending messages to the network" do |plugin|
   plugin.raw "hello\nbye\n"
 
   assert_equal $network.queue.pop, "hello\nbye\n"
+end
+
+test "running another plugin" do |plugin|
+  plugin.run $implementation
+
+  assert_equal $test, [:event, $network, "args"]
 end
 
 # TODO: cuba style on matchers (?), #reply, User and Channel helpers.

@@ -85,6 +85,10 @@ module Banter
       instance_exec *@args, &@block
     end
 
+    def run(plugin)
+      plugin.call @event, self.network, *@args
+    end
+
     # Public: Pushes messages onto the network queue. This method is also used
     # by the IRC::RFC2812::Commands mixin.
     #
