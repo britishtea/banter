@@ -3,14 +3,7 @@ require "banter/network"
 
 $plugin = proc { |*args| $test = args }
 
-begin
-  $port   = 4000
-  $server = TCPServer.new $port
-rescue
-  $port = $port.succ and retry
-end
-
-setup { Banter::Network.new "irc://0.0.0.0:#{$port}", :key => "value" }
+setup { Banter::Network.new "irc://0.0.0.0:4000", :key => "value" }
 
 prepare { $test = nil }
 
@@ -18,7 +11,7 @@ prepare { $test = nil }
 # Attributes
 
 test "getting the URI" do |network|
-  assert_equal network.uri, URI("irc://0.0.0.0:#{$port}")
+  assert_equal network.uri, URI("irc://0.0.0.0:4000")
 end
 
 test "getting the settings" do |network|
@@ -31,8 +24,8 @@ test "getting non-existing settings" do |network|
   assert_equal network.settings[:a][:b][:c], ThreadSafe::Hash.new
 end
 
-test "getting the socket" do |network|
-  assert network.socket.is_a? Socket
+test "getting the connection" do |network|
+  assert_equal network.connection.class, Banter::Connection
 end
 
 test "getting the queue" do |network|
@@ -125,204 +118,138 @@ test "handling an event concurrently" do |network|
   assert_equal $test, [:receive, network, message]
 end
 
+test "selected for reading" do |network|
+  
+end
+
+test "selected for writing" do |variable|
+  
+end
+
 
 # Sockets
 
 # TODO: All networking should probably extracted into a Connection class.
 
-test "connection status before connecting" do |network|
-  assert_equal network.connected?, false
-end
+test "connecting successfully" do |network|
+  network.connection.define_singleton_method(:connect) { |*| true }
 
-test "connecting" do |network|
-  network.register $plugin
-  client = Thread.new { $server.accept }
+  network.register($plugin) && $test = nil
   network.connect
-  client.join
-
-  IO.select nil, [network] # wait until connected
-  assert_equal network.connect, true
+  
   assert_equal $test, [:connect, network, nil]
-
-  client.value.close
 end
 
-test "connection status after connecting" do |network|
-  client = Thread.new { $server.accept }
-  network.connect
-  client.join
+test "connecting unsuccessfully" do |network|
+  network.connection.define_singleton_method(:connect) { |*| false }
 
-  IO.select nil, [network] # wait until connected
+  network.register($plugin) && $test = nil
   network.connect
 
-  assert_equal network.connected?, true
-
-  client.value.close 
+  assert_equal $test, nil
 end
-
 
 test "disconnecting" do |network|
-  network.register $plugin
-  client = Thread.new { $server.accept }
+  network.connection.define_singleton_method(:disconnect) { |*| nil }
 
+  network.register($plugin) && $test = nil
   network.connect
-  IO.select nil, [network]
   network.disconnect
 
-  assert client.value.eof?
   assert_equal $test, [:disconnect, network, nil]
 end
 
-test "connection status after disconnecting" do |network|
-  client = Thread.new { $server.accept }
 
-  network.connect
-  IO.select nil, [network]
-  network.disconnect
+test "selected for reading while not connected" do |network|
+  network.connection.define_singleton_method(:read) { |*| $test = true }
+  
+  network.selected_for_reading
 
-  assert client.value.eof?
-  assert_equal network.connected?, false
+  assert_equal $test, nil
 end
 
-# test "reading from a socket with no data" do |network|
-#   client = Thread.new { $server.accept }
-#   network.connect
-#   client.join
+test "selected for reading while connected" do |network|
+  network.define_singleton_method(:connected?) { true }
+  network.connection.define_singleton_method(:read) { |*| ["PING"] }
 
-#   assert_equal network.read, []
+  network.register $plugin
+  network.selected_for_reading
+  network.stop_handling!
 
-#   client.value.close
-# end
+  assert_equal $test, [:receive, network, network.parse_message("PING")]
+end
 
-# test "reading from a socket with data" do |network|
-#   client = Thread.new { $server.accept }
-#   network.connect
-#   client.join
+test "selected for reading while connected with errors" do |network|
+  exception = StandardError.new
+  network.define_singleton_method(:connected?) { true }
+  network.connection.define_singleton_method(:read) { raise exception }
 
-#   client.value.write ":prefix PRIVMSG banter :Hello\n"
-#   IO.select [network]
-  
-#   assert_equal network.read, [":prefix PRIVMSG banter :Hello\n"]
+  network.register $plugin
+  network.selected_for_reading
+  network.stop_handling!
 
-#   client.value.close
-# end
+  assert_equal $test, [:exception, network, exception]
+end
 
-# test "reading from a socket with partial data" do |network|
-#   client = Thread.new { $server.accept }
-#   network.connect
-#   client.join
-  
-#   client.value.write ":prefix PRIVMSG banter :Hell"
-#   IO.select [network]
-  
-#   assert_equal network.read, nil
+test "selected for writing while not connected" do |network|
+  network.define_singleton_method(:connected?) { false }
+  network.define_singleton_method(:connect) { |*| $test = true }
 
-#   client.value.write "o\n"
-#   IO.select [network]
+  network.selected_for_writing
 
-#   assert_equal network.read, [":prefix PRIVMSG banter :Hello\n"]
+  assert_equal $test, true
+end
 
-#   client.value.close
-# end
+test "selected for writing while connected" do |network|
+  network.define_singleton_method(:connected?) { true }
+  network.connection.define_singleton_method(:write) { |*| "PING\n" }
 
-# test "reading from a closed socket" do |network|
-#   client    = Thread.new { $server.accept }
-#   connected = network.connect
+  network.register($plugin) && $test = nil
+  network.queue.push "PING\n"
+  network.selected_for_writing
+  network.stop_handling!
 
-#   unless connected
-#     IO.select nil, [network]
-#     network.connect
-#   end
+  assert_equal $test, [:send, network, network.parse_message("PING\n")]
+end
 
-#   client.value.close
-#   IO.select [network], nil, nil, 0
+test "selected for writing while connected with partial message" do |network|
+  network.define_singleton_method(:connected?) { true }
+  network.connection.define_singleton_method(:write) { |*| "PIN" }
 
-#   # TODO: I think an exception should be raised here.
-#   assert_equal network.read, []
-# end
+  network.register($plugin) && $test = nil
+  network.queue.push "PING\n"
+  network.selected_for_writing
 
-# test "connection status after reading from a closed socket" do |network|
-#   client    = Thread.new { $server.accept }
-#   connected = network.connect
+  network.connection.define_singleton_method(:write) { |*| "G\n"}
+  network.selected_for_writing
+  network.stop_handling!
 
-#   unless connected
-#     IO.select nil, [network]
-#     network.connect
-#   end
-  
-#   client.value.close
-#   IO.select [network], nil, nil, 0
-#   network.read rescue
+  assert_equal $test, [:send, network, network.parse_message("PING\n")]  
+end
 
-#   assert_equal network.connected?, false
-# end
+test "selected for writing while connected with empty queue" do |network|
+  network.define_singleton_method(:connected?) { true }
+  network.connection.define_singleton_method(:write) { |*| "" }
 
-# test "writing" do |network|
-#   client    = Thread.new { $server.accept }
-#   connected = network.connect
+  network.register($plugin) && $test = nil
+  network.selected_for_writing
+  network.stop_handling!
 
-#   unless connected
-#     IO.select nil, [network]
-#     network.connect
-#   end
+  assert_equal $test, nil
+end
 
-#   read = Thread.new do
-#     IO.select [client.value], nil, nil, 3
-#     client.value.read_nonblock(3)
-#   end
-  
-#   IO.select nil, [network], nil, 0
-  
-#   assert network.write("hey")
-# end
+test "selected for writing while connected with errors" do |network|
+  exception = StandardError.new
+  network.define_singleton_method(:connected?) { true }
+  network.connection.define_singleton_method(:write) { |*| raise exception }
 
-# TODO: Add tests for writing to closed/broken/disconnected sockets.
+  network.register($plugin) && $test = nil
+  network.queue.push "PING\n"
+  network.selected_for_writing
+  network.stop_handling!
 
-# test "writing to a closed socket" do |network|
-
-#   client    = Thread.new { $server.accept }
-#   connected = network.connect
-
-#   unless connected
-#     IO.select nil, [network]
-#     network.connect
-#   end
-
-#   client.value.close_read
-#   client.value.close_write
-
-#   GC.start
-#   IO.select nil, [network]
-
-#   # A closed socket is detected only AFTER a write.
-#   assert_equal network.write("hey"), true
-  
-#   # It isn't garantueed that the next write will fail, but one eventually will.
-#   begin
-#     IO.select nil, [network]
-#     assert_equal network.write("hey"), false
-#   rescue Cutest::AssertionFailed
-#     sleep 1
-#     retry
-#   end
-# end
-
-# test "connection status after writing to a closed socket" do |network|
-#   client    = Thread.new { $server.accept }
-#   connected = network.connect
-
-#   unless connected
-#     IO.select nil, [network]
-#     network.connect
-#   end
-
-#   client.value.close
-#   IO.select nil, [network], nil, 0
-#   network.write "hey" # first time we won't notice.
-#   network.write "hey"
-
-#   assert_equal network.connected?, false
-# end
+  assert_equal $test, [:exception, network, exception] 
+end
 
 
 # Conversions

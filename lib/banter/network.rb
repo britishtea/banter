@@ -1,3 +1,4 @@
+require "banter/connection"
 require "banter/selectable_queue"
 # require "irc/rfc2812/message"
 require "socket"
@@ -22,8 +23,8 @@ module Banter
     # Public: Gets the settings ThreadSafe::Hash.
     attr_reader :settings
 
-    # Public: Gets the Socket.
-    attr_reader :socket
+    # Public: Gets the Banter::Connection.
+    attr_reader :connection
 
     # Public: Gets the SelectableQueue.
     attr_reader :queue
@@ -37,23 +38,16 @@ module Banter
     # block - A block that receives the new Network instance (optional).
     def initialize(uri, settings = {}, &block)
       # Public
-      @uri       = URI(uri)
-      @settings  = ThreadSafe::Hash.new settings
-      @socket    = create_socket
-      @queue     = SelectableQueue.new
-      @plugins   = ThreadSafe::Array.new
-      @connected = false
-
-      @settings.default_proc = proc do |hash, key|
-        hash[key] = ThreadSafe::Hash.new
-        hash[key].default_proc = @settings.default_proc
-        hash[key]
-      end
+      @uri                   = URI(uri)
+      @settings              = ThreadSafe::Hash.new settings
+      @settings.default_proc = proc { |hash, key| hash[key] = hash.dup.clear }
+      @connection            = Connection.new
+      @queue                 = SelectableQueue.new
+      @plugins               = ThreadSafe::Array.new
 
       # Internal
-      @thgroup      = ThreadGroup.new
-      @read_buffer  = String.new
-      @write_buffer = String.new
+      @thgroup = ThreadGroup.new
+      @buffer  = ""
 
       yield(self) if block_given?
     end
@@ -163,114 +157,75 @@ module Banter
     end
 
     def connected?
-      @connected
+      self.connection.connected?
     end
 
-    # Public: Connects the socket. Causes #connected to return true if 
-    # connecting was successful.
-    #
-    # Note in case the connection is refused (Errno::ECONNREFUSED) a new socket
-    # is created and an attempt to connect it is made.
-    #
-    # Returns true if connection was made, false otherwise.
-    # Raises every exception Socket#connect_nonblock raises, except 
-    # Errno::EISCONN and Errno::EINPROGRESS.
     def connect
-      puts "      Connecting..." if $DEBUG
+      connected = self.connection.connect self.uri.host, self.uri.port
+      
+      if connected
+        self.handle_event(:connect)
+      end
 
-      remote_addr = Socket.pack_sockaddr_in self.uri.port, self.uri.host
-      self.socket.connect_nonblock remote_addr
-    rescue Errno::EISCONN
-      puts "      Connected!" if $DEBUG
-
-      self.handle_event :connect
-
-      return @connected = true
-    rescue Errno::EINPROGRESS
-      return false
-    else
-      return false
+      return connected
     end
 
-    # Public: Closes the socket. Causes #connected to return false.
     def disconnect
-      self.socket.close
-    rescue IOError # Stream was already closed.
-    ensure
-      self.handle_event :disconnect
-
-      @connected = false
+      self.connection.disconnect
+      self.handle_event(:disconnect)
     end
 
-    # Public: Reconnects the socket.
     def reconnect
       self.disconnect if self.connected?
-      @socket = create_socket
+      self.connection.reset!
       self.connect
     end
 
     # Public: Calls #handle_message for every received line (if connected).
     def selected_for_reading
-      if self.connected?
-        read.each do |line|
-          self.handle_event_concurrently :receive, self.parse_message(line)
-        end
+      return unless self.connected?
+
+      self.connection.read.each do |line|
+        self.handle_event_concurrently :receive, self.parse_message(line)
       end
+    rescue
+      self.handle_event_concurrently :exception, $!
     end
 
     # Public: Calls #connect if unconnected, otherwise pops a message of the
     # queue and sends it to the IRC server.
     def selected_for_writing
       if self.connected?
-        to_write = self.queue.pop(true).to_s
+        # There might be something left in the buffers of the Connection. An 
+        # empty String is written to clear the Connection buffers.
+        if self.queue.size > 0
+          to_write = self.queue.pop(true).to_s
+        else
+          to_write = ""
+        end
+
+        @buffer << self.connection.write(to_write)
+
+        # Not the full message might have been written. To avoid the plugins
+        # handling partial messages, the partial message is stored in a buffer
+        # and handled by a next call when the full message has been written.
+        if @buffer.include? "\n"
+          to_handle = @buffer.slice! 0, @buffer.rindex("\n") + 2
           
-        write to_write unless to_write.empty?
-      else
+          to_handle.each_line do |line|
+            self.handle_event_concurrently :send, self.parse_message(line)
+          end
+        end
+      elsif not self.connected?
         self.connect
       end
     rescue ThreadError # Queue was empty
+    rescue
+      self.handle_event_concurrently :exception, $!
     end
 
-    alias_method :to_io, :socket
-
-  private
-
-    # Internal: Returns a new Socket of the right type.
-    def create_socket
-      Socket.new :INET, :STREAM, 0
-    end
-
-    # Public: Reads from the socket. Only reads full lines, if a partial message
-    # is received it will be stored in a buffer.
-    #
-    # Note: In case of a faulty socket, a new socket is created and an attempt 
-    # to connect it is made.
-    #
-    # Returns an Array.
-    def read
-      @read_buffer << self.socket.read_nonblock(4096)
-
-      if @read_buffer.include? "\n" 
-        full_lines = @read_buffer.slice!(0, @read_buffer.rindex("\n") + 2)
-        full_lines.lines
-      end
-    rescue IO::WaitReadable
-      return []
-    end
-
-    # Public: ...
-    #
-    # Note: In case of a faulty socket, a new socket is created and an attempt
-    # to connect it is made.
-    def write(message)
-      @write_buffer << message
-
-      bytes_written =  self.socket.write_nonblock @write_buffer 
-      @write_buffer.slice! 0, bytes_written
-
-      return true
-    rescue IO::WaitWritable
-      return false
+    def to_io
+      self.connection.to_io
     end
   end
 end
