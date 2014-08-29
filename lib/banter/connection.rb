@@ -1,3 +1,4 @@
+require "banter/errors"
 require "socket"
 
 module Banter
@@ -16,7 +17,8 @@ module Banter
     end
 
     # Public: Connects the socket. Causes #connected? to return true if 
-    # connecting was successful.
+    # connecting was successful. If an exception is raised it is extended by
+    # Banter::ConnectionError.
     #
     # host - A host String.
     # port - A port Integer.
@@ -35,8 +37,8 @@ module Banter
       @connected = true
     rescue Errno::EINPROGRESS
       return nil
-    rescue
-      return @connection
+    rescue => exception
+      raise exception.extend(Banter::ConnectionError)
     else
       return @connected
     end
@@ -57,7 +59,8 @@ module Banter
     end
 
     # Public: Reads from the socket. Only reads full lines, if a partial message
-    # is received it will be stored in a buffer.
+    # is received it will be stored in a buffer. If an exception is raised it is
+    # extended by Banter::ConnectionError.
     #
     # Returns an Array.
     # Raises every exception IO#read_nonblock raises, except Errno::EWOULDBLOCK
@@ -69,15 +72,17 @@ module Banter
         full_lines = @read_buffer.slice!(0, @read_buffer.rindex("\n") + 1)
         full_lines.lines
       end
-    rescue Errno::EWOULDBLOCK, Errno::EAGAIN
+    rescue Errno::EWOULDBLOCK, Errno::EAGAIN # Nothing to read.
       return []
-    rescue EOFError, Errno::EBADF
+    rescue *READ_ERRORS => exception
       @connected = false
-      raise
+
+      raise exception.extend(Banter::ConnectionError)
     end
 
     # Public: Writes a String to the socket. If the message can't be written
-    # fully, it is stored in a buffer and sent on the next call.
+    # fully, it is stored in a buffer and sent on the next call. If an exception
+    # is raised it is extended by Banter::ConnectionError.
     #
     # message - A message String.
     #
@@ -92,11 +97,12 @@ module Banter
       bytes_written = @socket.write_nonblock to_write
       
       return @write_buffer.slice!(0, bytes_written)
-    rescue Errno::EWOULDBLOCK, Errno::EAGAIN
+    rescue Errno::EWOULDBLOCK, Errno::EAGAIN, Errno::ENOBUFS
       return false
-    rescue Errno::ECONNRESET
+    rescue *WRITE_ERRORS => exception
       @connected = false
-      raise
+      
+      raise exception.extend(Banter::ConnectionError)
     end
 
     def to_io
@@ -104,6 +110,14 @@ module Banter
     end
 
   private
+
+    # Internal: Errors that indicate a flaky connection on reading.
+    READ_ERRORS = [EOFError, Errno::EBADF, Errno::ECONNRESET, Errno::ENOTCONN, 
+      Errno::ETIMEDOUT]
+
+    # Internal: Errors that indicate a flaky connection on writing.
+    WRITE_ERRORS = [Errno::EBADF, Errno::ECONNRESET, Errno::ENETDOWN,
+      Errno::ENETUNREACH, Errno::EPIPE]
 
     # Internal: Returns a new Socket of the right type. Currently only IPv4
     # sockets are supported.

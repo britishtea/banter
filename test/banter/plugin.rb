@@ -43,6 +43,29 @@ test "executing a plugin" do |plugin|
   assert_equal $test, ["message"]
 end
 
+test "executing a plugin that raises a Banter::Error" do |plugin|
+  implementation = proc { |*args| raise Banter::MissingSettings }
+  
+  plugin.define "name", "usage", &implementation
+
+  assert_raise Banter::MissingSettings do 
+    plugin.call :event, "network", "message"
+  end
+end
+
+test "executing a plugin that raises other exceptions" do |plugin|
+  exception      = StandardError.new
+  implementation = proc do |*args|
+    $test = args
+    raise exception unless args.first == :exception
+  end
+
+  plugin.define "name", "usage", &implementation
+  plugin.call :event, "network", "message"
+
+  assert_equal $test, [:exception, "network", exception]
+end
+
 # Convenience methods
 
 setup { Banter::Plugin.new :event, $network, "args" }

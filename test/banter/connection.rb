@@ -143,7 +143,8 @@ test "reading from closed socket" do |connection|
     raise EOFError
   end
 
-  assert_raise(EOFError) { connection.read }
+  assert_raise(Banter::ConnectionError) { connection.read }
+  assert_raise(EOFError)                { connection.read }
 end
 
 test "connection status after reading from closed socket" do |connection|
@@ -186,7 +187,8 @@ test "writing to closed socket" do |connection|
     raise Errno::ECONNRESET
   end
 
-  assert_raise(Errno::ECONNRESET) { connection.write("hi\n") }
+  assert_raise(Banter::ConnectionError) { connection.write "hi\n" }
+  assert_raise(Errno::ECONNRESET)       { connection.write "hi\n" }
 end
 
 test "connection status after writing to closed socket" do |connection|

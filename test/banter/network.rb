@@ -60,16 +60,17 @@ test "registering a plugin twice" do |network|
   assert_equal network.plugins, [$plugin, $plugin]
 end
 
-test "registering a plugin that raises on #call(:register, ...)" do |network|
-  plugin = proc { raise StandardError }
+test "registering a plugin that raises Banter::MissingSettings" do |network|
+  exception = Banter::MissingSettings
+  plugin    = proc { raise exception }
 
-  assert_equal network.register(plugin, :key => "value"), false
+  assert_raise(exception) { network.register plugin, :key => "value" }
   assert_equal network.plugins, []
-  assert_equal network.settings[plugin], ThreadSafe::Hash.new
+  assert_equal network.settings.key?(plugin), false
 end
 
 test "registering an invalid plugin" do |network|
-  assert_raise(ArgumentError) { network.register "" }
+  assert_raise(Banter::InvalidPlugin) { network.register "" }
 end
 
 test "unregistering a registered plugin" do |network|
@@ -104,7 +105,7 @@ end
 test "handling an event when #stop_handling! has been called" do |network|
   network.stop_handling!
 
-  assert_raise Banter::Network::StoppedHandling do
+  assert_raise Banter::StoppedHandling do
     network.handle_event :receive, "hello"
   end
 end
@@ -118,18 +119,16 @@ test "handling an event concurrently" do |network|
   assert_equal $test, [:receive, network, message]
 end
 
-test "selected for reading" do |network|
-  
-end
+test "handling an event concurrently when #stop_handling! has been called" do |network|
+  network.stop_handling!
 
-test "selected for writing" do |variable|
-  
+  assert_raise Banter::StoppedHandling do
+    network.handle_event_concurrently :receive, "hello"
+  end
 end
 
 
 # Sockets
-
-# TODO: All networking should probably extracted into a Connection class.
 
 test "connecting successfully" do |network|
   network.connection.define_singleton_method(:connect) { |*| true }
@@ -183,12 +182,10 @@ test "selected for reading while connected with errors" do |network|
   exception = StandardError.new
   network.define_singleton_method(:connected?) { true }
   network.connection.define_singleton_method(:read) { raise exception }
-
+  
   network.register $plugin
-  network.selected_for_reading
-  network.stop_handling!
-
-  assert_equal $test, [:exception, network, exception]
+  
+  assert_raise(exception.class) { network.selected_for_reading }
 end
 
 test "selected for writing while not connected" do |network|
@@ -243,12 +240,10 @@ test "selected for writing while connected with errors" do |network|
   network.define_singleton_method(:connected?) { true }
   network.connection.define_singleton_method(:write) { |*| raise exception }
 
-  network.register($plugin) && $test = nil
+  network.register $plugin
   network.queue.push "PING\n"
-  network.selected_for_writing
-  network.stop_handling!
-
-  assert_equal $test, [:exception, network, exception] 
+  
+  assert_raise(exception.class) { network.selected_for_writing }
 end
 
 

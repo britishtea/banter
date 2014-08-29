@@ -1,7 +1,7 @@
 require "banter/connection"
+require "banter/errors"
 require "banter/selectable_queue"
 # require "irc/rfc2812/message"
-require "socket"
 require "thread_safe"
 require "uri"
 
@@ -15,8 +15,6 @@ end
 module Banter
   # Public: Represents a network.
   class Network
-    StoppedHandling = Class.new(RuntimeError)
-
     # Public: Gets the URI. 
     attr_reader :uri
 
@@ -26,7 +24,7 @@ module Banter
     # Public: Gets the Banter::Connection.
     attr_reader :connection
 
-    # Public: Gets the SelectableQueue.
+    # Public: Gets the Banter::SelectableQueue.
     attr_reader :queue
 
     # Public: Gets the ThreadSafe::Array of plugins.
@@ -52,8 +50,8 @@ module Banter
       yield(self) if block_given?
     end
 
-    # Public: Registers a plugin. Invokes #call on `plugin` with `:registered`
-    # and `self` as arguments.
+    # Public: Registers a plugin. Invokes #call on `plugin` with `:register` and
+    # `self` as arguments.
     #
     # plugin   - An object that responds to #call.
     # settings - A settings Hash (default: {}).
@@ -69,25 +67,21 @@ module Banter
     #   # => false
     #
     # Returns `plugin` when registering was successfull.
-    # Returns false when registering was unsuccessfull.
-    # Raises ArgumentError when `plugin` does not respond to #call.
+    # Raises Banter::InvalidPlugin when `plugin` does not respond to #call.
+    # Raises Banter::MissingSettings when plugin is missing required settings.
     def register(plugin, settings = {})
       unless plugin.respond_to? :call
-        raise ArgumentError, "#{plugin}#call not implemented"
+        raise InvalidPlugin, "#{plugin}#call not implemented"
       end
 
       self.settings[plugin].merge! settings
-
-      begin
-        plugin.call :register, self
-      rescue
-        self.settings.delete plugin
-        return false
-      end
-
+      plugin.call :register, self
       self.plugins << plugin
 
       return plugin
+    rescue MissingSettings
+      self.settings.delete plugin
+      raise
     end
 
     # Public: Unregisters a plugin. Invokes #call on `plugin` with 
@@ -124,7 +118,7 @@ module Banter
     # event   - An event name Symbol.
     # message - A message String (default: nil).
     #
-    # Raises RunTimeError if #stop_handling! called after #wait has been called.
+    # Raises Banter::StoppedHandling if #stop_handling! has been called.
     def handle_event(event, message = nil)
       if @thgroup.enclosed?
         raise StoppedHandling, "waiting for plugins to finish"
@@ -133,12 +127,14 @@ module Banter
       self.plugins.each { |plugin| plugin.call event, self, message }
     end
 
-    # Public: Calls all plugins concurrently with `event` and `message`.
+    # Public: Calls all plugins concurrently with `event` and `message`. If an 
+    # exception was raised in the plugin, it's called again with `:exception` 
+    # and the exception.
     #
     # event   - An event name Symbol.
     # message - A message String (default: nil).
     #
-    # Raises RunTimeError if #stop_handling! called after #wait has been called.
+    # Raises Banter::StoppedHandling if #stop_handling! has been called.
     def handle_event_concurrently(event, message = nil)
       if @thgroup.enclosed?
         raise StoppedHandling, "waiting for plugins to finish"
@@ -182,14 +178,14 @@ module Banter
     end
 
     # Public: Calls #handle_message for every received line (if connected).
+    #
+    # Raises the same exceptions as Banter::Connection#read.
     def selected_for_reading
       return unless self.connected?
 
       self.connection.read.each do |line|
         self.handle_event_concurrently :receive, self.parse_message(line)
       end
-    rescue
-      self.handle_event_concurrently :exception, $!
     end
 
     # Public: Calls #connect if unconnected, otherwise pops a message of the
@@ -220,8 +216,6 @@ module Banter
         self.connect
       end
     rescue ThreadError # Queue was empty
-    rescue
-      self.handle_event_concurrently :exception, $!
     end
 
     def to_io

@@ -1,9 +1,8 @@
+require "banter/errors"
 require "irc/rfc2812/commands"
 require "irc/rfc2812/constants"
 
 module Banter
-  MissingSettings = Class.new KeyError
-
   # Public: Represents a plugin.
   class Plugin
     include IRC::RFC2812::Commands
@@ -80,9 +79,14 @@ module Banter
       block.call(*@args) if @event == event
     end
 
-    # Public: Executes the plugin.
+    # Public: Executes the plugin. All exceptions except for Banter::Error are
+    # caught and passed to the plugin with event `:exception`.
     def call
       instance_exec *@args, &@block
+    rescue Banter::Error
+      raise
+    rescue => exception
+      instance_exec :exception, self.network, exception, &@block
     end
 
     def run(plugin)

@@ -52,16 +52,16 @@ test "handle readable" do |eventloop|
   assert_equal $test, true
 end
 
-[Errno::EINVAL, Errno::ECONNREFUSED, EOFError].each do |error|
-  test "handle readable with #{error} connection error" do |eventloop|
-    $network.define_singleton_method(:selected_for_reading) { raise error }
-    $network.define_singleton_method(:reconnect) { $test = true }
-
-    eventloop.handle_readable $network
-
-    assert_equal $test, true
-    assert_equal eventloop.for_reading, []
+test "handle readable with a connection error" do |eventloop|
+  $network.define_singleton_method :selected_for_reading do
+    raise StandardError.new.extend(Banter::ConnectionError)
   end
+  $network.define_singleton_method(:reconnect) { $test = true }
+
+  eventloop.handle_readable $network
+
+  assert_equal $test, true
+  assert_equal eventloop.for_reading, []
 end
 
 
@@ -72,15 +72,14 @@ test "handle writeble" do |eventloop|
   assert_equal $test, true
 end
 
-errors = [Errno::EINVAL, Errno::ECONNREFUSED, Errno::EPIPE, EOFError, IOError]
-errors.each do |error|
-  test "handle writable with #{error} connection error" do |eventloop|
-    $network.define_singleton_method(:selected_for_writing) { raise error }
-    $network.define_singleton_method(:reconnect) { $test = true }
-    
-    eventloop.handle_writable $network
-
-    assert_equal $test, true
-    assert_equal eventloop.for_writing, []
+test "handle writable with a connection error" do |eventloop|
+  $network.define_singleton_method :selected_for_writing do
+    raise StandardError.new.extend(Banter::ConnectionError)
   end
+  $network.define_singleton_method(:reconnect) { $test = true }
+  
+  eventloop.handle_writable $network
+
+  assert_equal $test, true
+  assert_equal eventloop.for_writing, []
 end

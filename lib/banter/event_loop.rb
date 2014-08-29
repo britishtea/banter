@@ -1,4 +1,5 @@
 module Banter
+  # Internal: An event loop.
   class EventLoop
     # Public: The timeout in seconds. This is the amount of time between recon-
     # nect attempts.
@@ -24,8 +25,8 @@ module Banter
     # Public: Returns a list of selectable objects that should be monitored for
     # reading.
     def for_reading
-      connected = @networks.select(&:connected?)
-      queues    = @networks.select(&:connected?).map(&:queue)
+      connected = @networks.select &:connected?
+      queues    = connected.map &:queue
 
       connected.concat(queues) - @skip
     end
@@ -34,7 +35,7 @@ module Banter
     # writing.
     def for_writing
       with_filled_queue = @networks.select { |network| network.queue.size > 0 }
-      unconnected       = @networks.reject(&:connected?)
+      unconnected       = @networks.reject &:connected?
 
       with_filled_queue.concat(unconnected).uniq - @skip
     end
@@ -60,11 +61,11 @@ module Banter
     #
     # io - An IO object.
     def handle_readable(io)
-      puts "    - #{io}" if $DEBUG
+      warn "    - #{io}" if $DEBUG
 
       io.selected_for_reading
-    rescue Errno::EINVAL, Errno::ECONNREFUSED, EOFError
-      puts "      #{$!}" if $DEBUG
+    rescue Banter::ConnectionError
+      warn "      #{$!}" if $DEBUG
 
       io.reconnect if io.respond_to? :reconnect
       @skip << io # causes a timeout of `TIMEOUT` seconds
@@ -75,11 +76,11 @@ module Banter
     #
     # io - An IO object.
     def handle_writable(io)
-      puts "    - #{io}" if $DEBUG
+      warn "    - #{io}" if $DEBUG
 
       io.selected_for_writing
-    rescue Errno::EINVAL, Errno::ECONNREFUSED, Errno::EPIPE, EOFError, IOError
-      puts "      #{$!}" if $DEBUG
+    rescue Banter::ConnectionError
+      warn "      #{$!}" if $DEBUG
 
       io.reconnect if io.respond_to? :reconnect
       @skip << io # causes a timeout of `TIMEOUT` seconds
@@ -91,22 +92,21 @@ module Banter
     # writing - An Array of IO objects.
     def select_and_handle(reading, writing)
       if $DEBUG
-        puts "SELECT",
-             "  - for reading: #{reading.map(&:to_s)}",
-             "  - for writing: #{writing.map(&:to_s)}"
+        warn "SELECT", "  - for reading: #{reading.map(&:to_s)}",
+                       "  - for writing: #{writing.map(&:to_s)}"
       end
         
       readable, writable = IO.select reading, writing, nil, TIMEOUT
 
       @skip.clear
       
-      puts "  READABLES" if $DEBUG
+      warn "  READABLES" if $DEBUG
       Array(readable).each { |io| handle_readable io }
 
-      puts "  WRITABLES" if $DEBUG
+      warn "  WRITABLES" if $DEBUG
       Array(writable).each { |io| handle_writable io }
 
-      puts if $DEBUG
+      warn if $DEBUG
     end
   end
 end
