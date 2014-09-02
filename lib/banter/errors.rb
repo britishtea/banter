@@ -15,4 +15,16 @@ module Banter
   # Public: Raised when attempting to register a plugin without setting the
   # required settings.
   MissingSettings = Class.new(KeyError) { include Error }
+
+  # Public: Raised when an error reply is received to query.
+  class ErrorReply < StandardError
+    include Error
+
+    attr_reader :code
+
+    def initialize(message, code)
+      super message
+      @code = code
+    end
+  end
 end
