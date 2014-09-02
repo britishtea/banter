@@ -1,16 +1,9 @@
 require "banter/connection"
 require "banter/errors"
 require "banter/selectable_queue"
-# require "irc/rfc2812/message"
+require "irc/rfc2812/message"
 require "thread_safe"
 require "uri"
-
-# TODO: Actually use irc-helpers.
-module IRC
-  module RFC2812
-    Message = String
-  end
-end
 
 module Banter
   # Public: Represents a network.
@@ -84,13 +77,13 @@ module Banter
       raise
     end
 
-    # Public: Unregisters a plugin. Invokes #call on `plugin` with 
-    # `:unregistered` and `self` as arguments.
+    # Public: Unregisters a plugin. Invokes #call on `plugin` with `:unregister`
+    # and `self` as arguments.
     #
     # plugin - The plugin to unregister.
     #
-    # Returns `plugin` if unregistering was successful.
-    # Returns false if plugin was not registered.
+    # Returns `plugin` if unregistering was successful, false if plugin was not
+    # registered.
     def unregister(plugin)
       return false unless self.plugins.include? plugin
 
