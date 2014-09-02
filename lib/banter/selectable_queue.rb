@@ -8,11 +8,12 @@ module Banter
     def initialize
       @queue        = Queue.new
       @read, @write = IO.pipe
-      @mutex        = Mutex.new
+      @push_mutex   = Mutex.new
+      @pop_mutex    = Mutex.new
     end
 
     def push(object)
-      @mutex.synchronize do
+      @push_mutex.synchronize do
         @queue.push object
         @write << "."
       end
@@ -21,10 +22,12 @@ module Banter
     end
 
     def pop(non_block = false)
-      object = @queue.pop non_block
-      @read.read 1
+      @pop_mutex.synchronize do
+        object = @queue.pop non_block
+        @read.read 1
 
-      return object
+        object
+      end
     end
 
     def size
