@@ -86,7 +86,9 @@ module Banter
     rescue Banter::Error
       raise
     rescue => exception
-      instance_exec :exception, self.network, exception, &@block
+      @event, @args = :exception, exception
+      
+      retry
     end
 
     def run(plugin)

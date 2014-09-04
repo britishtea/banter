@@ -57,13 +57,13 @@ test "executing a plugin that raises other exceptions" do |plugin|
   exception      = StandardError.new
   implementation = proc do |*args|
     $test = args
-    raise exception unless args.first == :exception
+    raise exception if $test.first == "message"
   end
 
   plugin.define "name", "usage", &implementation
   plugin.call :event, "network", "message"
 
-  assert_equal $test, [:exception, "network", exception]
+  assert_equal $test, [exception]
 end
 
 # Convenience methods
