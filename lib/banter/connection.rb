@@ -93,10 +93,14 @@ module Banter
     def write(message)
       @write_buffer << message
 
-      to_write      = @write_buffer.slice(0, @write_buffer.rindex("\n") + 2)
-      bytes_written = @socket.write_nonblock to_write
+      if @write_buffer.include? "\n"
+        to_write      = @write_buffer.slice(0, @write_buffer.rindex("\n") + 2)
+        bytes_written = @socket.write_nonblock to_write
       
-      return @write_buffer.slice!(0, bytes_written)
+        return @write_buffer.slice!(0, bytes_written)
+      else
+        return ""
+      end
     rescue Errno::EWOULDBLOCK, Errno::EAGAIN, Errno::ENOBUFS
       return false
     rescue *WRITE_ERRORS => exception
