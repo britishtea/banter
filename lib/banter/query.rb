@@ -19,7 +19,14 @@ module Banter
   class Query
     attr_accessor :start, :replies, :end, :errors
 
-    def initialize
+    # Public: Initializes the query.
+    #
+    # start   - A Symbol or nil (default: nil).
+    # ending  - A Sybol or nil (default: nil).
+    # replies - An Array of Symbols or nil (default: nil).
+    # errors  - An Array of Symbols or nil (default: nil).
+    def initialize(start = nil, ending = nil, replies = nil, errors = nil)
+      @start, @end, @replies, @errors = start, ending, replies, errors
       @messages  = ThreadSafe::Array.new
       @queue     = SelectableQueue.new
       @started   = false
