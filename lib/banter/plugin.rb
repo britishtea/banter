@@ -58,6 +58,15 @@ module Banter
     # Public: Initializes the plugin.
     def initialize(event, network, *args, &block)
       @_event, @_network, @_args, @_block = event, network, args, block
+
+      
+      if network.respond_to? :protocol
+        protocol = network.protocol
+      else
+        protocol = IRC::RFC2812
+      end
+
+      extend protocol::Commands, protocol::Constants
     end
 
     # Public: Gets the Banter::Network.
