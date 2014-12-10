@@ -202,7 +202,7 @@ test "selected for writing while connected" do |network|
   network.connection.define_singleton_method(:write) { |*| "PING\n" }
 
   network.register($plugin) && $test = nil
-  network.queue.push "PING\n"
+  network << "PING\n"
   network.selected_for_writing
   network.stop_handling!
 
@@ -214,7 +214,7 @@ test "selected for writing while connected with partial message" do |network|
   network.connection.define_singleton_method(:write) { |*| "PIN" }
 
   network.register($plugin) && $test = nil
-  network.queue.push "PING\n"
+  network << "PING\n"
   network.selected_for_writing
 
   network.connection.define_singleton_method(:write) { |*| "G\n"}
@@ -241,7 +241,7 @@ test "selected for writing while connected with errors" do |network|
   network.connection.define_singleton_method(:write) { |*| raise exception }
 
   network.register $plugin
-  network.queue.push "PING\n"
+  network << "PING\n"
   
   assert_raise(exception.class) { network.selected_for_writing }
 end

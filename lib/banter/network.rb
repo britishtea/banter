@@ -170,6 +170,17 @@ module Banter
       self.connect
     end
 
+    # Public: Sends a message to the server.
+    #
+    # message - An object implementing #to_s.
+    #
+    # Returns `self`.
+    def <<(message)
+      @queue.push(message.to_s)
+
+      return self
+    end
+
     # Public: Calls #handle_message for every received line (if connected).
     #
     # Raises the same exceptions as Banter::Connection#read.

@@ -98,9 +98,9 @@ module Banter
     # Public: Pushes messages onto the network queue. This method is also used
     # by the IRC::RFC2812::Commands mixin.
     #
-    # message - A message String.
+    # message - An object implementing #to_s.
     def raw(message)
-      self.network.queue.push message.to_s
+      self.network << message
     end
   end
 end
