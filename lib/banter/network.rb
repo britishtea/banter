@@ -150,6 +150,8 @@ module Banter
     end
 
     def connect
+      return true if self.connected?
+
       connected = self.connection.connect self.uri.host, self.uri.port
       
       if connected
@@ -216,7 +218,7 @@ module Banter
             self.handle_event_concurrently :send, self.parse_message(line)
           end
         end
-      elsif not self.connected?
+      else
         self.connect
       end
     rescue ThreadError # Queue was empty
