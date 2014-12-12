@@ -102,31 +102,6 @@ test "handling an event" do |network|
   assert_equal $test, [:receive, network, message]
 end
 
-test "handling an event when #stop_handling! has been called" do |network|
-  network.stop_handling!
-
-  assert_raise Banter::StoppedHandling do
-    network.handle_event :receive, "hello"
-  end
-end
-
-test "handling an event concurrently" do |network|
-  message = ":prefix PRIVMSG #channel :Hello"
-  network.register $plugin
-  network.handle_event_concurrently :receive, message
-  network.stop_handling!
-
-  assert_equal $test, [:receive, network, message]
-end
-
-test "handling an event concurrently when #stop_handling! has been called" do |network|
-  network.stop_handling!
-
-  assert_raise Banter::StoppedHandling do
-    network.handle_event_concurrently :receive, "hello"
-  end
-end
-
 
 # Sockets
 
@@ -173,7 +148,6 @@ test "selected for reading while connected" do |network|
 
   network.register $plugin
   network.selected_for_reading
-  network.stop_handling!
 
   assert_equal $test, [:receive, network, network.parse_message("PING")]
 end
@@ -204,7 +178,6 @@ test "selected for writing while connected" do |network|
   network.register($plugin) && $test = nil
   network << "PING\n"
   network.selected_for_writing
-  network.stop_handling!
 
   assert_equal $test, [:send, network, network.parse_message("PING\n")]
 end
@@ -219,7 +192,6 @@ test "selected for writing while connected with partial message" do |network|
 
   network.connection.define_singleton_method(:write) { |*| "G\n"}
   network.selected_for_writing
-  network.stop_handling!
 
   assert_equal $test, [:send, network, network.parse_message("PING\n")]  
 end
@@ -230,7 +202,6 @@ test "selected for writing while connected with empty queue" do |network|
 
   network.register($plugin) && $test = nil
   network.selected_for_writing
-  network.stop_handling!
 
   assert_equal $test, nil
 end

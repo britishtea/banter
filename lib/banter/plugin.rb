@@ -8,6 +8,29 @@ module Banter
     include IRC::RFC2812::Commands
     include IRC::RFC2812::Constants
 
+    # Public: Makes a plugin concurrent. Use `extend` on a Banter::Plugin to
+    # make it run concurrently. When the plugin is called with events 
+    # `:unregister` or `:disconnect`, #call blocks until all running instances
+    # have finished.
+    module Concurrent
+      def thgroup
+        @thgroup ||= ThreadGroup.new
+      end
+
+      def call(event, *args)
+        thread = Thread.new { super }
+        thgroup.add(thread)
+
+        if event == :register
+          thread.join
+        end
+
+        if [:unregister, :disconnect].include?(event)
+          @thgroup.list.each(&:join)
+        end
+      end
+    end
+
     def self.name;  @name;  end
     def self.usage; @usage; end
 

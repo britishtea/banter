@@ -37,8 +37,7 @@ module Banter
       @plugins               = ThreadSafe::Array.new
 
       # Internal
-      @thgroup = ThreadGroup.new
-      @buffer  = ""
+      @buffer = ""
 
       yield(self) if block_given?
     end
@@ -110,39 +109,10 @@ module Banter
     #
     # event   - An event name Symbol.
     # message - A message String (default: nil).
-    #
-    # Raises Banter::StoppedHandling if #stop_handling! has been called.
     def handle_event(event, message = nil)
-      if @thgroup.enclosed?
-        raise StoppedHandling, "waiting for plugins to finish"
-      end
-
       self.plugins.each { |plugin| plugin.call event, self, message }
-    end
 
-    # Public: Calls all plugins concurrently with `event` and `message`. If an 
-    # exception was raised in the plugin, it's called again with `:exception` 
-    # and the exception.
-    #
-    # event   - An event name Symbol.
-    # message - A message String (default: nil).
-    #
-    # Raises Banter::StoppedHandling if #stop_handling! has been called.
-    def handle_event_concurrently(event, message = nil)
-      if @thgroup.enclosed?
-        raise StoppedHandling, "waiting for plugins to finish"
-      end
-
-      self.plugins.each do |plugin|
-        @thgroup.add Thread.new { plugin.call event, self, message }
-      end
-    end
-
-    # Public: Waits for all running plugins to finish. Note that after calling
-    # #handle_message will raise a StoppedHandling.
-    def stop_handling!
-      @thgroup.enclose
-      @thgroup.list.each(&:join)
+      return self
     end
 
     def connected?
@@ -190,7 +160,7 @@ module Banter
       return unless self.connected?
 
       self.connection.read.each do |line|
-        self.handle_event_concurrently :receive, self.parse_message(line)
+        self.handle_event(:receive, self.parse_message(line))
       end
     end
 
@@ -215,7 +185,7 @@ module Banter
           to_handle = @buffer.slice! 0, @buffer.rindex("\n") + 2
           
           to_handle.each_line do |line|
-            self.handle_event_concurrently :send, self.parse_message(line)
+            self.handle_event(:send, self.parse_message(line))
           end
         end
       else
