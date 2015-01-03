@@ -28,12 +28,8 @@ module Banter
     # Raises every exception Socket#connect_nonblock raises, except 
     # Errno::EISCONN and Errno::EINPROGRESS.
     def connect(host, port)
-      warn "      Connecting..." if $DEBUG
-
       @socket.connect_nonblock Socket.pack_sockaddr_in(port, host)
     rescue Errno::EISCONN
-      warn "      Connected!" if $DEBUG
-
       @connected = true
     rescue Errno::EINPROGRESS
       return nil

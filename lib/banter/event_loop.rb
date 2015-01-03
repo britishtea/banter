@@ -61,12 +61,8 @@ module Banter
     #
     # io - An IO object.
     def handle_readable(io)
-      warn "    - #{io}" if $DEBUG
-
       io.selected_for_reading
     rescue Banter::ConnectionError
-      warn "      #{$!}" if $DEBUG
-
       io.reconnect if io.respond_to? :reconnect
       @skip << io # causes a timeout of `TIMEOUT` seconds
     end
@@ -76,12 +72,8 @@ module Banter
     #
     # io - An IO object.
     def handle_writable(io)
-      warn "    - #{io}" if $DEBUG
-
       io.selected_for_writing
     rescue Banter::ConnectionError
-      warn "      #{$!}" if $DEBUG
-
       io.reconnect if io.respond_to? :reconnect
       @skip << io # causes a timeout of `TIMEOUT` seconds
     end
@@ -91,22 +83,12 @@ module Banter
     # reading - An Array of IO objects.
     # writing - An Array of IO objects.
     def select_and_handle(reading, writing)
-      if $DEBUG
-        warn "SELECT", "  - for reading: #{reading.map(&:to_s)}",
-                       "  - for writing: #{writing.map(&:to_s)}"
-      end
-        
       readable, writable = IO.select reading, writing, nil, TIMEOUT
 
       @skip.clear
       
-      warn "  READABLES" if $DEBUG
       Array(readable).each { |io| handle_readable io }
-
-      warn "  WRITABLES" if $DEBUG
       Array(writable).each { |io| handle_writable io }
-
-      warn if $DEBUG
     end
   end
 end
