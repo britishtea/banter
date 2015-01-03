@@ -71,6 +71,8 @@ module Banter
       if @read_buffer.include? "\n" 
         full_lines = @read_buffer.slice!(0, @read_buffer.rindex("\n") + 1)
         full_lines.lines
+      else
+        return []
       end
     rescue Errno::EWOULDBLOCK, Errno::EAGAIN # Nothing to read.
       return []

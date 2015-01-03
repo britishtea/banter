@@ -121,9 +121,12 @@ test "reading while readable" do |connection|
 end
 
 test "reading partial messages while readable" do |connection|
-  connection.to_io.define_singleton_method(:read_nonblock) { |*| "hi\nho" }
+  connection.to_io.define_singleton_method(:read_nonblock) { |*| "hi\nh" }
 
   assert_equal connection.read, ["hi\n"]
+
+  connection.to_io.define_singleton_method(:read_nonblock) { |*| "o" }
+  assert_equal connection.read, []
 
   connection.to_io.define_singleton_method(:read_nonblock) { |*| "\n" }
 
