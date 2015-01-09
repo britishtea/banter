@@ -6,50 +6,50 @@ def msg(message)
   IRC::RFC2812::Message.new message
 end
 
-setup { Banter::Query.new }
+setup { Banter::Query }
 
-test "expecting one reply (no start, no end)" do |query|
-  query.replies = [:reply]
+test "expecting one reply (no start, no end)" do |klass|
+  query = klass.new(:replies => [:reply])
   
-  query << msg("REPLY")
-  query.wait
+  query << msg("IGNORE") << msg("REPLY") << msg("REPLY")
 
   assert_equal query.messages, [msg("REPLY")]
 end
 
-test "expecting multiple replies (no start, with end)" do |query|
-  query.replies = [:replyone, :replytwo]
-  query.end     = :end
+test "expecting multiple replies (no start, with end)" do |klass|
+  query = klass.new(:end => [:end], :replies => [:one, :two])
 
-  query << msg("REPLYONE")
-  query << msg("REPLYTWO")
+  query << msg("ONE") << msg("IGNORE") << msg("TWO")
   query << msg("END")
-  query.wait
 
-  assert_equal query.messages, [msg("REPLYONE"), msg("REPLYTWO")]
+  assert_equal query.messages, [msg("ONE"), msg("TWO")]
 end
 
-test "expecting multiple replies (with start, with end)" do |query|
-  query.replies = [:replyone, :replytwo]
-  query.start   = :start
-  query.end     = :end
+test "expecting multiple replies (with start, with end)" do |klass|
+  query = klass.new(:start => :start, :end => :end, :replies => [:one, :two])
 
-  query << msg("REPLYONE") # this one should be ignored
+  query << msg("ONE") # this one should be ignored
   query << msg("START")
-  query << msg("REPLYONE")
-  query << msg("REPLYTWO")
+  query << msg("ONE") << msg("IGNORE") << msg("TWO") 
   query << msg("END")
-  query.wait
 
-  assert_equal query.messages, [msg("REPLYONE"), msg("REPLYTWO")]
+  assert_equal query.messages, [msg("ONE"), msg("TWO")]
 end
 
-test "errors" do |query|
-  query.replies = [:reply]
-  query.errors  = [:error]
+test "errors" do |klass|
+  query = klass.new(:replies => [:reply], :errors => [:error])
 
   query << msg("ERROR")
   
-  assert_raise(Banter::ErrorReply) { query.wait }
-  assert_equal query.messages, []
+  assert_raise(Banter::ErrorReply) { query.messages }
+  
+  exception = assert_raise(Banter::ErrorReply) { query.messages }
+  assert_equal exception.code, :error
+end
+
+test "can act as a plugin" do |klass|
+  query = klass.new({})
+
+  assert query.respond_to? :call
+  assert_equal query.method(:call).arity, -3
 end

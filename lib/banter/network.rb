@@ -1,6 +1,5 @@
 require "banter/connection"
 require "banter/errors"
-require "banter/selectable_queue"
 require "irc/rfc2812/message"
 require "thread_safe"
 require "uri"
@@ -17,7 +16,7 @@ module Banter
     # Public: Gets the Banter::Connection.
     attr_reader :connection
 
-    # Public: Gets the Banter::SelectableQueue.
+    # Public: Gets the pipe (IO) for outgoing messages.
     attr_reader :queue
 
     # Public: Gets the ThreadSafe::Array of plugins.
@@ -33,7 +32,7 @@ module Banter
       @settings              = ThreadSafe::Hash.new settings
       @settings.default_proc = proc { |hash, key| hash[key] = hash.dup.clear }
       @connection            = Connection.new
-      @queue                 = SelectableQueue.new
+      @queue, @queue_write   = IO.pipe
       @plugins               = ThreadSafe::Array.new
 
       # Internal
@@ -148,7 +147,7 @@ module Banter
     #
     # Returns `self`.
     def <<(message)
-      @queue.push(message.to_s)
+      @queue_write.write(message)
 
       return self
     end
@@ -170,10 +169,12 @@ module Banter
       if self.connected?
         # There might be something left in the buffers of the Connection. An 
         # empty String is written to clear the Connection buffers.
-        if self.queue.size > 0
-          to_write = self.queue.pop(true).to_s
-        else
+        readable, _ = IO.select([@queue], nil, nil, 0)
+
+        if readable.nil? || readable.empty?
           to_write = ""
+        else
+          to_write = @queue.readpartial(1024)
         end
 
         @buffer << self.connection.write(to_write)

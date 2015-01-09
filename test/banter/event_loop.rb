@@ -26,7 +26,7 @@ test "for writeability: unconnected, queue empty" do |eventloop|
 end
 
 test "for writeability: unconnected, queue filled" do |eventloop|
-  $network.queue.push "PING :hello"
+  $network << "PING :hello"
 
   assert_equal eventloop.for_writing, [$network]
 end
@@ -39,7 +39,7 @@ end
 
 test "for writeability: connected, queue filled" do |eventloop|
   $network.define_singleton_method(:connected?) { true }
-  $network.queue.push "PING :hello"
+  $network << "PING :hello"
 
   assert_equal eventloop.for_writing, [$network]
 end

@@ -29,7 +29,7 @@ test "getting the connection" do |network|
 end
 
 test "getting the queue" do |network|
-  assert_equal network.queue.class, Banter::SelectableQueue
+  assert_equal network.queue.class, IO
 end
 
 

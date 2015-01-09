@@ -25,19 +25,22 @@ module Banter
     # Public: Returns a list of selectable objects that should be monitored for
     # reading.
     def for_reading
-      connected = @networks.select &:connected?
-      queues    = connected.map &:queue
+      connected = @networks.select(&:connected?) - @skip
+      queues    = connected.map(&:queue)
 
-      connected.concat(queues) - @skip
+      connected.concat(queues)
     end
 
     # Public: Returns a list of selectable objects that should be monitored for
     # writing.
     def for_writing
-      with_filled_queue = @networks.select { |network| network.queue.size > 0 }
-      unconnected       = @networks.reject &:connected?
+      networks     = @networks - @skip
+      conn, unconn = networks.partition(&:connected?)
+      queues,_     = conn.select do |network|
+        IO.select([network.queue], nil, nil, 0)
+      end
 
-      with_filled_queue.concat(unconnected).uniq - @skip
+      unconn.concat(Array(queues))
     end
 
     # Public: Starts the event loop. This is a blocking call.
@@ -61,7 +64,9 @@ module Banter
     #
     # io - An IO object.
     def handle_readable(io)
-      io.selected_for_reading
+      if io.respond_to?(:selected_for_reading)
+        io.selected_for_reading
+      end
     rescue Banter::ConnectionError
       io.reconnect if io.respond_to? :reconnect
       @skip << io # causes a timeout of `TIMEOUT` seconds
@@ -72,7 +77,9 @@ module Banter
     #
     # io - An IO object.
     def handle_writable(io)
-      io.selected_for_writing
+      if io.respond_to?(:selected_for_writing)
+        io.selected_for_writing
+      end
     rescue Banter::ConnectionError
       io.reconnect if io.respond_to? :reconnect
       @skip << io # causes a timeout of `TIMEOUT` seconds

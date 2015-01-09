@@ -119,9 +119,9 @@ test "working with irc-helpers" do |plugin|
 end
 
 test "sending messages to the network" do |plugin|
-  plugin.raw "hello\nbye\n"
+  plugin.raw "hello\r\n"
 
-  assert_equal $network.queue.pop, "hello\nbye\n"
+  assert_equal $network.queue.gets, "hello\r\n"
 end
 
 test "running another plugin" do |plugin|
