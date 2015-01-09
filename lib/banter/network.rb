@@ -1,6 +1,6 @@
 require "banter/connection"
 require "banter/errors"
-require "irc/rfc2812/message"
+require "irc/rfc2812"
 require "thread_safe"
 require "uri"
 
