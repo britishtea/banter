@@ -98,14 +98,19 @@ module Banter
     #   event :receive do |message|
     #     "..."
     #   end
+    #
+    # Throws :__matched__
     def event(event, &block)
-      block.call(*@args) if @event == event
+      if @event == event
+        throw(:__matched__, yield(*@args))
+      end
+    rescue UncaughtThrowError
     end
 
     # Public: Executes the plugin. All exceptions except for Banter::Error are
     # caught and passed to the plugin with event `:exception`.
     def call
-      instance_exec *@args, &@block
+      catch(:__matched__) { instance_exec *@args, &@block }
     rescue Banter::Error
       raise
     rescue => exception
