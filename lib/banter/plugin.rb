@@ -24,9 +24,9 @@ module Banter
         if event == :register
           thread.join
         end
-
+      ensure
         if [:unregister, :disconnect].include?(event)
-          @thgroup.list.each(&:join)
+          thgroup.list.each(&:join)
         end
       end
     end
@@ -107,16 +107,17 @@ module Banter
     rescue UncaughtThrowError
     end
 
-    # Public: Executes the plugin. All exceptions except for Banter::Error are
-    # caught and passed to the plugin with event `:exception`.
+    # Public: Executes the plugin. All exceptions except Banter::Errors are
+    # printed to the standard error stream (STDERR) before they are re-raised.
     def call
-      catch(:__matched__) { instance_exec *@args, &@block }
+      catch(:__matched__) { instance_exec(*@args, &@block) }
     rescue Banter::Error
       raise
     rescue => exception
-      @event, @args = :exception, exception
-      
-      retry
+      warn "#{exception.class}: #{exception.message}"
+      warn exception.backtrace.map { |line| "    #{line}" }
+
+      raise
     end
 
     def run(plugin)

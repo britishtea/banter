@@ -109,7 +109,9 @@ module Banter
     # event   - An event name Symbol.
     # message - A message String (default: nil).
     def handle_event(event, message = nil)
-      self.plugins.each { |plugin| plugin.call event, self, message }
+      self.plugins.each do |plugin|
+        plugin.call(event, self, message) rescue nil
+      end
 
       return self
     end
