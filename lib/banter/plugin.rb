@@ -5,9 +5,6 @@ require "irc/rfc2812/constants"
 module Banter
   # Public: Represents a plugin.
   class Plugin
-    include IRC::RFC2812::Commands
-    include IRC::RFC2812::Constants
-
     # Public: Makes a plugin concurrent. Use `extend` on a Banter::Plugin to
     # make it run concurrently. When the plugin is called with events 
     # `:unregister` or `:disconnect`, #call blocks until all running instances
@@ -66,7 +63,8 @@ module Banter
         protocol = IRC::RFC2812
       end
 
-      extend protocol::Commands, protocol::Constants
+      extend protocol::Commands
+      singleton_class.send(:include, protocol::Constants)
     end
 
     # Public: Gets the Banter::Network.
