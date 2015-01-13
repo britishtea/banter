@@ -135,10 +135,16 @@ module Banter
     def disconnect
       self.connection.disconnect
       self.handle_event(:disconnect)
+      empty_buffers
     end
 
     def reconnect
-      self.disconnect if self.connected?
+      if self.connected?
+        self.disconnect
+      else
+        empty_buffers
+      end
+
       self.connection.reset!
       self.connect
     end
@@ -150,7 +156,8 @@ module Banter
     # Returns `self`.
     def <<(message)
       @queue_write.write(message)
-
+    rescue IOError # queue is closed for writing
+    ensure
       return self
     end
 
@@ -198,6 +205,16 @@ module Banter
 
     def to_io
       self.connection.to_io
+    end
+
+  private
+
+    def empty_buffers
+      @buffer = ""
+      @queue.close
+      @queue_write.close
+
+      @queue, @queue_write = IO.pipe
     end
   end
 end

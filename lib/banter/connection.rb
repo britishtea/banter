@@ -2,18 +2,20 @@ require "banter/errors"
 require "socket"
 
 module Banter
+  # Internal: A connection with buffers that writes and reads in a non-blocking
+  # fashion.
   class Connection
     # Public: Initializes the Connection.
     def initialize
-      @read_buffer  = String.new
-      @write_buffer = String.new
+      @socket       = create_socket
+      @read_buffer  = ""
+      @write_buffer = ""
       @connected    = false
-
-      reset!
     end
 
+    # Public: Resets the connection and empties its buffers.
     def reset!
-      @socket = create_socket
+      initialize
     end
 
     # Public: Connects the socket. Causes #connected? to return true if 
@@ -42,10 +44,11 @@ module Banter
     # Public: Disconnectes the socket. Causes #connected? to return false.
     def disconnect
       @socket.close
-    rescue IOError # Stream was already closed.
-    ensure
-      warn "      Disconnected" if $DEBUG
 
+      return true
+    rescue IOError # Stream was already closed.
+      return false
+    ensure
       @connected = false
     end
 
