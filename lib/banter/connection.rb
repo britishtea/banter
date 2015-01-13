@@ -84,23 +84,17 @@ module Banter
     #
     # message - A message String.
     #
-    # Returns the part of `message` that was written if data was written, 
-    # returns false if no data was written.
-    # Raises every exception IO#write_nonblock raises, except Errno::EWOULDBLOCK
-    # and Errno::EAGAIN (i.e. IO::WaitWriteable).
+    # Returns a String (the part of `message` that was written). The String is
+    # empty if the data couldn't not be written (was blocked on writing).
+    # Raises every exception IO#write_nonblock raises except Errno::EWOULDBLOCK,
+    # Errno::EAGAIN and Errno::ENOBUFS (i.e. IO::WaitWriteable).
     def write(message)
       @write_buffer << message
-
-      if @write_buffer.include? "\n"
-        to_write      = @write_buffer.slice(0, @write_buffer.rindex("\n") + 2)
-        bytes_written = @socket.write_nonblock to_write
+      bytes_written = @socket.write_nonblock(@write_buffer)
       
-        return @write_buffer.slice!(0, bytes_written)
-      else
-        return ""
-      end
+      return @write_buffer.slice!(0, bytes_written)
     rescue Errno::EWOULDBLOCK, Errno::EAGAIN, Errno::ENOBUFS
-      return false
+      return ""
     rescue *WRITE_ERRORS => exception
       @connected = false
       

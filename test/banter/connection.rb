@@ -182,7 +182,7 @@ test "writing while not writeable" do |connection|
     raise Errno::EWOULDBLOCK.tap { |x| x.extend IO::WaitWritable }
   end
 
-  assert_equal connection.write("hi\n"), false
+  assert_equal connection.write("hi\n"), ""
 end
 
 test "writing to closed socket" do |connection|

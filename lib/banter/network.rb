@@ -185,7 +185,7 @@ module Banter
         # handling partial messages, the partial message is stored in a buffer
         # and handled by a next call when the full message has been written.
         if @buffer.include? "\n"
-          to_handle = @buffer.slice! 0, @buffer.rindex("\n") + 2
+          to_handle = @buffer.slice! 0, @buffer.rindex("\n") + 1 
           
           to_handle.each_line do |line|
             self.handle_event(:send, self.parse_message(line))
@@ -194,7 +194,6 @@ module Banter
       else
         self.connect
       end
-    rescue ThreadError # Queue was empty
     end
 
     def to_io
