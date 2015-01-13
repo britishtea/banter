@@ -120,6 +120,7 @@ module Banter
       self.connection.connected?
     end
 
+    # Plugins will receive a :connect event after the connection is made.
     def connect
       return true if self.connected?
 
@@ -132,9 +133,10 @@ module Banter
       return connected
     end
 
+    # Plugins will receive a :disconnect event before disconnecting.
     def disconnect
-      self.connection.disconnect
       self.handle_event(:disconnect)
+      self.connection.disconnect
       empty_buffers
     end
 
