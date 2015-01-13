@@ -36,7 +36,7 @@ module Banter
     def for_writing
       networks     = @networks - @skip
       conn, unconn = networks.partition(&:connected?)
-      queues,_     = conn.select do |network|
+      queues       = conn.select do |network|
         IO.select([network.queue], nil, nil, 0)
       end
 
