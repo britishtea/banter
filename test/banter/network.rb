@@ -14,22 +14,30 @@ test "getting the URI" do |network|
   assert_equal network.uri, URI("irc://0.0.0.0:4000")
 end
 
-test "getting the settings" do |network|
-  assert_equal network.settings.class, ThreadSafe::Hash
-  assert_equal network.settings, ThreadSafe::Hash.new(:key => "value")
-end
-
-test "getting non-existing settings" do |network|
-  assert_equal network.settings[:a], ThreadSafe::Hash.new
-  assert_equal network.settings[:a][:b][:c], ThreadSafe::Hash.new
-end
-
 test "getting the connection" do |network|
   assert_equal network.connection.class, Banter::Connection
 end
 
 test "getting the queue" do |network|
   assert_equal network.queue.class, IO
+end
+
+
+# Settings
+
+test "getting existing settings" do |network|
+  assert_equal network[:key], "value" # :key is set in initialize
+end
+
+test "gettin non-existing settings" do |network|
+  assert_equal network[:a], ThreadSafe::Hash.new
+  assert_equal network[:a][:b][:c], ThreadSafe::Hash.new
+end
+
+test "setting settings" do |network|
+  network[:a] = "a"
+
+  assert_equal network[:a], "a"
 end
 
 
@@ -42,13 +50,13 @@ end
 test "registering a plugin" do |network|
   assert_equal network.register($plugin), $plugin 
   assert_equal network.plugins, [$plugin]
-  assert_equal network.settings[$plugin], ThreadSafe::Hash.new
+  assert_equal network[$plugin], ThreadSafe::Hash.new
 
   assert_equal $test, [:register, network]
 end
 
 test "registering a plugin with settings" do |network|
-  plugin = proc { |_, network| $test = network.settings[plugin] }
+  plugin = proc { |_, network| $test = network[plugin] }
   network.register plugin, :key => "value"
 
   assert_equal $test, ThreadSafe::Hash.try_convert(:key => "value")
@@ -66,7 +74,7 @@ test "registering a plugin that raises Banter::MissingSettings" do |network|
 
   assert_raise(exception) { network.register plugin, :key => "value" }
   assert_equal network.plugins, []
-  assert_equal network.settings.key?(plugin), false
+  assert network[plugin].empty?
 end
 
 test "registering an invalid plugin" do |network|
@@ -78,7 +86,7 @@ test "unregistering a registered plugin" do |network|
 
   assert_equal network.unregister($plugin), $plugin
   assert_equal $test, [:unregister, network]
-  assert_equal network.settings[$plugin], ThreadSafe::Hash.new
+  assert_equal network[$plugin], ThreadSafe::Hash.new
 end
 
 test "unregistering an unregistered plugin" do |network|

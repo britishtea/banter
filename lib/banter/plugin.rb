@@ -53,7 +53,7 @@ module Banter
 
     # Public: Gets the plugin settings ThreadSafe::Hash.
     def settings
-      self.network.settings[self.class]
+      self.network[self.class]
     end
 
     # Public: Guarantees settings are present.

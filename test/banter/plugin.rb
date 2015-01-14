@@ -62,7 +62,7 @@ test "getting the network" do |plugin|
 end
 
 test "getting the settings" do |plugin|
-  assert plugin.settings.equal?($network.settings[plugin.class])
+  assert plugin.settings.equal?($network[plugin.class])
 end
 
 test "required settings that are not set" do |plugin|

@@ -10,9 +10,6 @@ module Banter
     # Public: Gets the URI. 
     attr_reader :uri
 
-    # Public: Gets the settings ThreadSafe::Hash.
-    attr_reader :settings
-
     # Public: Gets the Banter::Connection.
     attr_reader :connection
 
@@ -29,7 +26,7 @@ module Banter
     def initialize(uri, settings = {}, &block)
       # Public
       @uri                   = URI(uri)
-      @settings              = ThreadSafe::Hash.new settings
+      @settings              = ThreadSafe::Hash.new
       @settings.default_proc = proc { |hash, key| hash[key] = hash.dup.clear }
       @connection            = Connection.new
       @queue, @queue_write   = IO.pipe
@@ -37,6 +34,8 @@ module Banter
 
       # Internal
       @buffer = ""
+
+      @settings.merge!(settings)
 
       yield(self) if block_given?
     end
@@ -65,13 +64,13 @@ module Banter
         raise InvalidPlugin, "#{plugin}#call not implemented"
       end
 
-      self.settings[plugin].merge! settings
+      @settings[plugin].merge!(settings)
       plugin.call :register, self
       self.plugins << plugin
 
       return plugin
     rescue MissingSettings
-      self.settings.delete plugin
+      @settings.delete(plugin)
       raise
     end
 
@@ -88,9 +87,17 @@ module Banter
       plugin.call :unregister, self
       
       self.plugins.delete plugin
-      self.settings.delete(plugin)
+      @settings.delete(plugin)
 
       return plugin
+    end
+
+    def [](key)
+      @settings[key]
+    end
+
+    def []=(key, value)
+      @settings[key] = value
     end
 
     # Public: Parses a message String. This method is used by #handle_message to
