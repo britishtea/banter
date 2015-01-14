@@ -13,20 +13,27 @@ module Banter
     # `:unregister` or `:disconnect`, #call blocks until all running instances
     # have finished.
     module Concurrent
-      def thgroup
-        @thgroup ||= ThreadGroup.new
+      def threadgroups
+        @threadgroups ||= Hash.new do |hash, key|
+          hash[key] = ThreadGroup.new
+        end
       end
 
-      def call(event, *args)
+      # Public: Runs the plugin in a thread.
+      #
+      # Returns the spawned thread.
+      def call(event, network, *args)
         thread = Thread.new { super }
-        thgroup.add(thread)
+        threadgroups[network].add(thread)
 
         if event == :register
           thread.join
         end
+
+        return thread
       ensure
         if [:unregister, :disconnect].include?(event)
-          thgroup.list.each(&:join)
+          threadgroups[network].list.each(&:join)
         end
       end
     end
