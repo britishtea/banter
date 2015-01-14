@@ -50,12 +50,14 @@ module Banter
       new(event, network, *args, &@block).call
     end
 
-    # Public: Gets the Banter::Network.
-    attr_reader :network
-
     # Public: Initializes the plugin.
     def initialize(event, network, *args, &block)
-      @event, @network, @args, @block = event, network, args, block
+      @_event, @_network, @_args, @_block = event, network, args, block
+    end
+
+    # Public: Gets the Banter::Network.
+    def network
+      @_network
     end
 
     # Public: Gets the plugin settings ThreadSafe::Hash.
@@ -108,8 +110,8 @@ module Banter
     #
     # Throws :__matched__
     def event(event, &block)
-      if @event == event
-        throw(:__matched__, yield(*@args))
+      if @_event == event
+        throw(:__matched__, yield(*@_args))
       end
     rescue UncaughtThrowError
     end
@@ -117,7 +119,7 @@ module Banter
     # Public: Executes the plugin. All exceptions except Banter::Errors are
     # printed to the standard error stream (STDERR) before they are re-raised.
     def call
-      catch(:__matched__) { instance_exec(*@args, &@block) }
+      catch(:__matched__) { instance_exec(*@_args, &@_block) }
     rescue Banter::Error
       raise
     rescue => exception
@@ -128,7 +130,7 @@ module Banter
     end
 
     def run(plugin)
-      plugin.call @event, self.network, *@args
+      plugin.call @_event, self.network, *@_args
     end
 
     # Public: Pushes messages onto the network queue. This method is also used
