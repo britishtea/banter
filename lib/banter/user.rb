@@ -1,7 +1,6 @@
 require "banter/query"
 
 module Banter
-  # TODO: Use a proper WHOIS parser.
   class User
     # Public: Initializes the Banter::User.
     #
@@ -35,63 +34,38 @@ module Banter
 
     alias_method :to_s, :nick
 
-    def user
-      whois(@constants::RPL_WHOISUSER).first.params[2]
-    end
-
-    def host
-      whois(@constants::RPL_WHOISUSER).first.params[3]      
-    end
-
-    def realname
-      whois(@constants::RPL_WHOISUSER).first.trail
-    end
+    def user;     whois.user;     end
+    def host;     whois.host;     end
+    def realname; whois.realname; end
 
     # Public: Gets a list of channels the user is connected to. If a `status`
     # argument is given it only returns the channels the user has that status
     # on. If no `status` argument is given it returns all channels.
     #
-    # status - A status Symbol such as `:@` or `:+` (default: nil).
+    # status - A status Symbol such as `:@` or `:+` (default: false).
     #
     # Returns an Array of channel Strings.
-    def channels(status = nil)
-      replies  = whois(@constants::RPL_WHOISCHANNELS)
-      channels = replies.flat_map { |reply| reply.trail.split }
-
-      # TODO: An abomination, don't hardcode channel namespaces!
-      if status.nil?
-        channels.map { |chan|
-          if chan =~ /^[@+~%&]/
-            chan[1..-1]
-          else
-            chan
-          end
-        }
-      else
-        channels.select { |chan| chan.start_with?(status.to_s) }
-                .map    { |chan| chan[1..-1] }
-      end
+    def channels(status = false)
+      whois.channels(status)
     end
 
     # Public: Gets the hostname of server the user is connected to.
     #
     # Returns a String.
     def server
-      whois(@constants::RPL_WHOISSERVER).first.params[2]
+      whois.server
     end
 
     # Public: Checks if the user is an IRC operator.
     def network_operator?
-      whois(@constants::RPL_WHOISOPERATOR).size > 0
+      whois.operator?
     end
 
     # Public: Gets the idle time.
     #
     # Returns a Time object.
     def idle_since
-      message = whois(@constants::RPL_WHOISIDLE).first
-
-      return message.time - message.params[2].to_i
+      Time.now - whois.seconds_idle
     end
 
     # Public: Checks if the user is marked as "away".
@@ -130,14 +104,12 @@ module Banter
 
     # Internal: Performs a WHOIS query.
     #
-    # command - A command Symbol.
-    #
-    # Returns the replies matching `command`.
-    def whois(command)
-      query   = Query.new(@replies[:whois])
-      replies = replies_for(query) { @commands.whois(self) }
+    # Returns an IRC::*::Whois object.
+    def whois
+      query    = Query.new(@replies[:whois])
+      messages = replies_for(query) { @commands.whois(self) }
 
-      return replies.select { |reply| reply.command == command }
+      return @network.protocol::Whois.new(*messages)
     end
   end
 end
