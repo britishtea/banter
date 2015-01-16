@@ -123,9 +123,11 @@ module Banter
         end
       end.map { |m| m.trail.split }.flatten
 
-      # TODO: Make removing status Symbols more robust (won't work for user \ for example).
       if status.nil?
-        names.map { |nick| nick[/^[^a-zA-Z]/] ? nick[1..-1] : nick }
+        # Nicknames may start with a letter or a "special".
+        # nickname = A-Z a-z
+        # special  = [ ] \ ` _ ^ { | }
+        names.map { |nick| nick[/^[^a-zA-Z\[\]\\`_\^{|}]/] ? nick[1..-1] : nick }
       else
         names.select { |nick| nick[0] == status }
              .map { |nick| nick[1..-1] }

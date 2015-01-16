@@ -174,13 +174,13 @@ end
 # Names
 
 test "getting the list of names" do |channel|
-  messages = ["353 nickname = #other :@a +b c",
+  messages = ["353 nickname = #other :@a +b c \\",
               "353 nickname = #channel :@one +two",
-              "353 nickname = #channel :three",
+              "353 nickname = #channel :three \\",
               "366 nickname #channel :End of /NAMES list."]
   names = simulate(messages) { channel.names }
  
-  assert_equal names, ["one", "two", "three"]
+  assert_equal names, ["one", "two", "three", "\\"]
 end
 
 test "getting the list of users with a particular status" do |channel|
