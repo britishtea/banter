@@ -23,17 +23,22 @@ module Banter
       #
       # Returns the spawned thread.
       def call(event, network, *args)
-        thread = Thread.new { super }
-        threadgroups[network].add(thread)
-
         if event == :register
-          thread.join
-        end
+          super
+        else
+          thread = Thread.new { super }
+          threadgroups[network].add(thread)
 
-        return thread
+          return thread
+        end
       ensure
         if [:unregister, :disconnect].include?(event)
+          thread.join
           threadgroups[network].list.each(&:join)
+        end
+
+        if event == :disconnect
+          threadgroups.delete(network)
         end
       end
     end

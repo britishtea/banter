@@ -45,6 +45,14 @@ test "for writeability: connected, queue filled" do |eventloop|
 end
 
 
+test "disconnects networks when stopping" do |eventloop|
+  $network.define_singleton_method(:disconnect) { $test = true }
+  eventloop.stop
+
+  assert_equal $test, true
+end
+
+
 test "handle readable" do |eventloop|
   $network.define_singleton_method(:selected_for_reading) { $test = true }
   eventloop.handle_readable $network

@@ -56,6 +56,7 @@ module Banter
 
     # Public: Stops the event loop.
     def stop
+      @networks.each(&:disconnect)
       @stop = true
     end
 
@@ -96,6 +97,12 @@ module Banter
       
       Array(readable).each { |io| handle_readable io }
       Array(writable).each { |io| handle_writable io }
+    rescue SignalException => exception
+      if [2, 15].include?(exception.signo) # 2 = SIGINT, 15 = SIGTERM
+        stop
+      end
+
+      raise
     end
   end
 end

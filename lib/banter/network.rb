@@ -143,15 +143,15 @@ module Banter
     # Plugins will receive a :disconnect event before disconnecting.
     def disconnect
       self.handle_event(:disconnect)
-      self.connection.disconnect
       empty_buffers
+      self.connection.disconnect
     end
 
     def reconnect
       if self.connected?
         self.disconnect
       else
-        empty_buffers
+        discard_buffers
       end
 
       self.connection.reset!
@@ -218,10 +218,28 @@ module Banter
 
   private
 
+    # Writes the internal buffers @buffer and @queue to the socket and clears
+    # them.
     def empty_buffers
-      @buffer = ""
-      @queue.close
       @queue_write.close
+      @buffer << @queue.read
+      @queue.close
+
+      @buffer.each_line do |line|
+        to_io.write(line)
+        handle_event(:send, self.parse_message(line))
+      end
+
+      @buffer.clear
+
+      @queue, @queue_write = IO.pipe
+    end
+
+    # Clears the internal buffers @buffer and @queue.
+    def discard_buffers
+      @queue_write.close
+      @buffer.clear
+      @queue.close
 
       @queue, @queue_write = IO.pipe
     end
