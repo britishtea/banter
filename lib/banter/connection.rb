@@ -41,13 +41,22 @@ module Banter
       return @connected
     end
 
-    # Public: Disconnectes the socket. Causes #connected? to return false.
+    # Public: Disconnects the socket. Causes #connected? to return false.
     def disconnect
+      # Ensure the kernel buffers are written to the socket. See this page for
+      # headscratches: http://goo.gl/WNJ9da.
+      @socket.flush
+      @socket.read(4096) until @socket.eof?
+      @socket.shutdown
       @socket.close
 
       return true
-    rescue IOError # Stream was already closed.
-      return false
+    rescue Errno::ECONNRESET # The call to #read failed.
+      @socket.close
+
+      return true
+    rescue Errno::ENOTCONN # The call to #shutdown failed.
+      return true
     ensure
       @connected = false
     end
@@ -121,7 +130,11 @@ module Banter
     # Internal: Returns a new Socket of the right type. Currently only IPv4
     # sockets are supported.
     def create_socket
-      Socket.new :INET, :STREAM, 0
+      socket = Socket.new(:INET, :STREAM, 0)
+      socket.setsockopt(:SOCKET, :REUSEADDR, true)
+      socket.setsockopt(Socket::Option.linger(true, 60))
+
+      return socket
     end
   end
 end
