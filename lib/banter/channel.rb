@@ -40,7 +40,7 @@ module Banter
       query    = Query.new replies
       messages = replies_for(query) { @commands.mode(self.name) }
 
-      return parse_modes(messages.first)
+      return @network.protocol::Modes.new(*messages)
     end
 
     # Public: Looks up a channel mode.
@@ -52,10 +52,12 @@ module Banter
     def [](mode)
       case mode.to_s
         when "b", "e", "I" then return masks_list(mode)
-        else                    return self.modes.fetch(mode, false)
+        else                    return self.modes[mode]
       end
     end
 
+    # TODO: Removing bans, ban exception and invite exceptions is impossible.
+    
     # Public: Sets a mode. Use `true`/`false` to set/unset modes.
     #
     # mode      - A mode Symbol.
@@ -64,18 +66,23 @@ module Banter
       replies = @replies[:channel_mode].dup
       replies.delete(:end)
 
-      query     = Query.new replies
-      messages  = replies_for(query) do
+      query    = Query.new replies
+      messages = replies_for(query) do
         if parameter == true
-          parameter = nil
+          param = nil
         elsif parameter == false
-          mode = :"-#{mode}"
+          param = false
+          mode  = :"-#{mode}"
+        else
+          param = parameter
         end
 
-        @commands.mode(self.name, mode, parameter)
+        @commands.mode(self.name, mode, param)
       end
 
-      unless parse_modes(messages.first).key?(mode)
+      modes = @network.protocol::Modes.new(*messages)
+
+      unless modes[mode] == parameter
         raise Banter::ErrorReply.new("setting mode failed", 0)
       end
     end
@@ -183,27 +190,11 @@ module Banter
       @network.unregister(query)
     end
 
-    # TODO: Use a proper mode parser.
-    def parse_modes(message)
-      if message.command == :mode
-        mode_chars = message.params[1]
-        parameters = message.params[2..-1]
-      else
-        mode_chars = message.params[2]
-        parameters = message.params[3..-1]
-      end
-      
-      mode_chars = mode_chars.delete("+").chars.map(&:to_sym)
-      parameters.fill true, parameters.length, mode_chars.length
-
-      return Hash[mode_chars.zip parameters]
-    end
-
     def masks_list(mode)
-      query = Query.new @replies[:channel_mode]
-      msgs  = replies_for(query) { @commands.mode(self.name, mode) }
+      query    = Query.new(@replies[:channel_mode])
+      messages = replies_for(query) { @commands.mode(self.name, mode) }
 
-      return msgs.map { |message| message.params[2] }
+      return @network.protocol::Modes.new(*messages)[mode]
     end
   end
 end

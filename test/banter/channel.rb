@@ -44,7 +44,7 @@ test "getting a list of channel modes" do |channel|
   messages = ["324 nickname #channel +knt key"]
   modes    = simulate(messages) { channel.modes }
 
-  assert_equal modes, { :k => "key", :n => true, :t => true }
+  assert_equal modes.to_hash, { :k => "key", :n => true, :t => true }
 end
 
 test "getting a mode when mode is set" do |channel|
