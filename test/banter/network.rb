@@ -94,12 +94,6 @@ test "unregistering an unregistered plugin" do |network|
 end
 
 
-test "parsing messages" do |network|
-  msg = ":prefix PRIVMSG #channel :Hello"
-
-  assert_equal network.parse_message(msg), IRC::RFC2812::Message.new(msg)
-end
-
 # Handling events
 
 test "handling an event" do |network|
@@ -157,7 +151,7 @@ test "selected for reading while connected" do |network|
   network.register $plugin
   network.selected_for_reading
 
-  assert_equal $test, [:receive, network, network.parse_message("PING")]
+  assert_equal $test, [:receive, network, network.protocol::Message.new("PING")]
 end
 
 test "selected for reading while connected with errors" do |network|
@@ -187,7 +181,7 @@ test "selected for writing while connected" do |network|
   network << "PING\n"
   network.selected_for_writing
 
-  assert_equal $test, [:send, network, network.parse_message("PING\n")]
+  assert_equal $test, [:send, network, network.protocol::Message.new("PING\n")]
 end
 
 test "selected for writing while connected with partial message" do |network|
@@ -201,7 +195,7 @@ test "selected for writing while connected with partial message" do |network|
   network.connection.define_singleton_method(:write) { |*| "G\n"}
   network.selected_for_writing
 
-  assert_equal $test, [:send, network, network.parse_message("PING\n")]  
+  assert_equal $test, [:send, network, network.protocol::Message.new("PING\n")]  
 end
 
 test "selected for writing while connected with empty queue" do |network|

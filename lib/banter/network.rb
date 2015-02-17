@@ -104,17 +104,6 @@ module Banter
       @settings[key] = value
     end
 
-    # Public: Parses a message String. This method is used by #handle_message to
-    # transform message Strings into useable objects it can hand to plugins. It
-    # can safely be monkey-patched if another message format is required.
-    #
-    # message - A message String.
-    #
-    # Returns an IRC::RFC2812::Message.
-    def parse_message(message)
-      self.protocol::Message.new message
-    end
-
     # Public: Calls all plugins with `event` and `message`.
     #
     # event   - An event name Symbol.
@@ -181,7 +170,7 @@ module Banter
       return unless self.connected?
 
       self.connection.read.each do |line|
-        self.handle_event(:receive, self.parse_message(line))
+        self.handle_event(:receive, parse_message(line))
       end
     end
 
@@ -208,7 +197,7 @@ module Banter
           to_handle = @buffer.slice! 0, @buffer.rindex("\n") + 1 
           
           to_handle.each_line do |line|
-            self.handle_event(:send, self.parse_message(line))
+            self.handle_event(:send, parse_message(line))
           end
         end
       else
@@ -231,7 +220,7 @@ module Banter
 
       @buffer.each_line do |line|
         to_io.write(line)
-        handle_event(:send, self.parse_message(line))
+        handle_event(:send, parse_message(line))
       end
 
       @buffer.clear
@@ -246,6 +235,10 @@ module Banter
       @queue.close
 
       @queue, @queue_write = IO.pipe
+    end
+
+    def parse_message(message)
+      @protocol::Message.new(message)
     end
   end
 end
