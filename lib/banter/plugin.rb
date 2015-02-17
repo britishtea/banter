@@ -57,14 +57,14 @@ module Banter
       @_event, @_network, @_args, @_block = event, network, args, block
 
       
-      if network.respond_to? :protocol
-        protocol = network.protocol
+      if network.respond_to? :implementation
+        implementation = network.implementation
       else
-        protocol = IRC::RFC2812
+        implementation = IRC::RFC2812
       end
 
-      extend protocol::Commands
-      singleton_class.send(:include, protocol::Constants)
+      extend implementation::Commands
+      singleton_class.send(:include, implementation::Constants)
     end
 
     # Public: Gets the Banter::Network.

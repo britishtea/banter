@@ -19,8 +19,8 @@ module Banter
     # Public: Gets the ThreadSafe::Array of plugins.
     attr_reader :plugins
 
-    # Public: Gets the protocol namespace (default: IRC::RFC2812).
-    attr_accessor :protocol
+    # Public: Gets the implementation namespace (default: IRC::RFC2812).
+    attr_accessor :implementation
 
     # Public: Initializes the Network.
     #
@@ -34,7 +34,7 @@ module Banter
       @connection            = Connection.new
       @queue, @queue_write   = IO.pipe
       @plugins               = ThreadSafe::Array.new
-      @protocol              = IRC::RFC2812
+      @implementation        = IRC::RFC2812
 
       # Internal
       @buffer = ""
@@ -238,7 +238,7 @@ module Banter
     end
 
     def parse_message(message)
-      @protocol::Message.new(message)
+      @implementation::Message.new(message)
     end
   end
 end

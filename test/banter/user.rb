@@ -90,7 +90,7 @@ test "#idle_since" do |user|
 end
 
 test "an unsuccessful WHOIS query" do |user|
-  messages = $network.protocol::REPLIES[:whois][:errors]
+  messages = $network.implementation::REPLIES[:whois][:errors]
 
   messages.each do |message|
     assert_raise(Banter::ErrorReply) do

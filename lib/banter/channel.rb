@@ -17,9 +17,9 @@ module Banter
       @name, @prefix, @network = name, name[0], network
 
       # Convenience.
-      @commands  = network.protocol::Commands
-      @constants = network.protocol::Constants
-      @replies   = network.protocol::REPLIES
+      @commands  = network.implementation::Commands
+      @constants = network.implementation::Constants
+      @replies   = network.implementation::REPLIES
     end
 
     def privmsg(message)
@@ -40,7 +40,7 @@ module Banter
       query    = Query.new replies
       messages = replies_for(query) { @commands.mode(self.name) }
 
-      return @network.protocol::Modes.new(*messages)
+      return @network.implementation::Modes.new(*messages)
     end
 
     # Public: Looks up a channel mode.
@@ -80,7 +80,7 @@ module Banter
         @commands.mode(self.name, mode, param)
       end
 
-      modes = @network.protocol::Modes.new(*messages)
+      modes = @network.implementation::Modes.new(*messages)
 
       unless modes[mode] == parameter
         raise Banter::ErrorReply.new("setting mode failed", 0)
@@ -194,7 +194,7 @@ module Banter
       query    = Query.new(@replies[:channel_mode])
       messages = replies_for(query) { @commands.mode(self.name, mode) }
 
-      return @network.protocol::Modes.new(*messages)[mode]
+      return @network.implementation::Modes.new(*messages)[mode]
     end
   end
 end

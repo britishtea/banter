@@ -7,7 +7,7 @@ def simulate(messages, &block)
   $network.queue.gets
 
   messages.each do |message|
-    $network.handle_event(:receive, $network.protocol::Message.new(message))
+    $network.handle_event(:receive, $network.implementation::Message.new(message))
   end
 
   result.value

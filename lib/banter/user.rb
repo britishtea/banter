@@ -8,16 +8,16 @@ module Banter
     # network - A Banter::Network.
     def initialize(prefix, network)
       @network = network
-      @prefix  = network.protocol::Prefix.new(prefix)
+      @prefix  = network.implementation::Prefix.new(prefix)
       
       # Convenience
-      @commands  = @network.protocol::Commands
-      @constants = @network.protocol::Constants
-      @replies   = @network.protocol::REPLIES
+      @commands  = @network.implementation::Commands
+      @constants = @network.implementation::Constants
+      @replies   = @network.implementation::REPLIES
     end
 
     def ==(other)
-      @prefix == @network.protocol::Prefix.new(other)
+      @prefix == @network.implementation::Prefix.new(other)
     end
 
     def privmsg(message)
@@ -109,7 +109,7 @@ module Banter
       query    = Query.new(@replies[:whois])
       messages = replies_for(query) { @commands.whois(self) }
 
-      return @network.protocol::Whois.new(*messages)
+      return @network.implementation::Whois.new(*messages)
     end
   end
 end

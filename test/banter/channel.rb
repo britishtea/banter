@@ -117,7 +117,7 @@ test "setting a mode with parameters successfully" do |channel|
 end
 
 test "setting a mode unsuccessfully" do |channel|
-  messages = $network.protocol::REPLIES[:channel_mode][:errors]
+  messages = $network.implementation::REPLIES[:channel_mode][:errors]
   
   messages.each do |message|
     assert_raise(Banter::ErrorReply) do
@@ -144,7 +144,7 @@ test "getting the topic when topic is not set" do |channel|
 end
 
 test "getting the topic of a channel not currently joined" do |channel|
-  messages = $network.protocol::REPLIES[:topic][:errors]
+  messages = $network.implementation::REPLIES[:topic][:errors]
   
   messages.each do |message|
     assert_raise(Banter::ErrorReply) do
@@ -161,7 +161,7 @@ test "setting the topic successfully" do |channel|
 end
 
 test "setting the topic without operator privileges" do |channel|
-  messages = $network.protocol::REPLIES[:topic][:errors]
+  messages = $network.implementation::REPLIES[:topic][:errors]
   
   messages.each do |message|
     assert_raise(Banter::ErrorReply) do
@@ -194,7 +194,7 @@ test "getting the list of users with a particular status" do |channel|
 end
 
 test "getting the list of names unsuccessfully" do |channel|
-  messages = $network.protocol::REPLIES[:names][:errors]
+  messages = $network.implementation::REPLIES[:names][:errors]
   
   messages.each do |message|
     assert_raise(Banter::ErrorReply) do
@@ -221,7 +221,7 @@ test "invitng a user that is away" do |channel|
 end
 
 test "inviting a user unsuccessfully" do |channel|
-  messages = $network.protocol::REPLIES[:invite][:errors]
+  messages = $network.implementation::REPLIES[:invite][:errors]
 
   messages.each do |message|
     assert_raise(Banter::ErrorReply) do
@@ -247,7 +247,7 @@ test "kicking a user with a reason successfully" do |channel|
 end
 
 test "kicking a user unsuccessfully" do |channel|
-  messages = $network.protocol::REPLIES[:kick][:errors]
+  messages = $network.implementation::REPLIES[:kick][:errors]
 
   messages.each do |message|
     assert_raise(Banter::ErrorReply) do
