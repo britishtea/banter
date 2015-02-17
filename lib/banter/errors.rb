@@ -8,10 +8,6 @@ module Banter
   # #call.
   InvalidPlugin = Class.new(ArgumentError) { include Error }
   
-  # Public: Raised when attempting to handle an event after 
-  # Banter::Network#stopped_handling has been called.
-  StoppedHandling = Class.new(RuntimeError) { include Error }
-  
   # Public: Raised when attempting to register a plugin without setting the
   # required settings.
   MissingSettings = Class.new(KeyError) { include Error }
