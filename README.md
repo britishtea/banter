@@ -17,6 +17,8 @@ subject to change.
 ## Usage
 
 ```ruby
+require "banter/client"
+
 client = Banter::Client.new
 client.network("irc://irc.freenode.net:6667")
 client.register(Banter::Plugins::Default, :nick => "banter_bot",
@@ -53,6 +55,7 @@ Below is a simple plugin that relays messages between two channels.
 
 ```ruby
 require "banter/channel"
+require "banter/plugin"
 
 class Relay < Banter::Plugin
   define "relay" do
@@ -83,6 +86,8 @@ Plugins can be run concurrently when the module `Banter::Plugin::Concurrent` is
 mixed in.
 
 ```ruby
+require "banter/plugin"
+
 class Relay
   extend Banter::Plugin::Concurrent
 

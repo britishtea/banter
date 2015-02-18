@@ -1,3 +1,5 @@
+require "banter/plugin"
+
 class Default < Banter::Plugin
   include IRC::RFC2812::Constants
   
