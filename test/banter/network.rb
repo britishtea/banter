@@ -105,6 +105,13 @@ test "handling an event" do |network|
 end
 
 
+# Getting channel and user objects
+
+test "getting a channel object" do |network|
+  assert_equal network.channel("#name").class, Banter::Channel
+end
+
+
 # Sockets
 
 test "connecting successfully" do |network|
