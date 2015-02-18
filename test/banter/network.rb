@@ -111,6 +111,10 @@ test "getting a channel object" do |network|
   assert_equal network.channel("#name").class, Banter::Channel
 end
 
+test "getting a user object" do |network|
+  assert_equal network.user("nickname").class, Banter::User
+end
+
 
 # Sockets
 

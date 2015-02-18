@@ -1,6 +1,7 @@
 require "banter/channel"
 require "banter/connection"
 require "banter/errors"
+require "banter/user"
 require "irc/rfc2812"
 require "thread_safe"
 require "uri"
@@ -122,6 +123,13 @@ module Banter
     # Returns a Banter::Channel.
     def channel(name)
       Channel.new(name, self)
+    end
+
+    # Public: Creates a Banter::User instance.
+    #
+    # Returns a Banter::User.
+    def user(prefix)
+      User.new(prefix, self)
     end
 
     def connected?
