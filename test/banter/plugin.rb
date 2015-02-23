@@ -3,6 +3,10 @@ require "banter/plugin"
 require "banter/network"
 require "irc/rfc2812/message"
 
+def msg(message)
+  IRC::RFC2812::Message.new(message)
+end
+
 setup { Banter::Plugin }
 
 prepare do
@@ -53,6 +57,18 @@ test "executing a plugin that raises an exception" do |plugin|
     plugin.call :event, "network", "message"
   end
 end
+
+test "replying to PRIVMSGs" do |plugin|
+  $network.define_singleton_method(:<<) { |msg| $test = msg }
+  plugin.define("name", "usage") { reply "reply" }
+
+  plugin.call(:send, $network, msg("PRIVMSG target :message"))
+  assert_equal $test, nil
+
+  plugin.call(:receive, $network, msg("PRIVMSG target :message"))
+  assert_equal $test, "PRIVMSG target :reply\r\n"
+end
+
 
 # Convenience methods
 

@@ -157,5 +157,12 @@ module Banter
     def raw(message)
       self.network << message
     end
+
+    # Public: Replies to a PRIVMSG.
+    def reply(response)
+      if @_event == :receive && message.command == :privmsg
+        privmsg message.params[0], response
+      end
+    end
   end
 end
