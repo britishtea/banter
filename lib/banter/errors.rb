@@ -12,6 +12,9 @@ module Banter
   # required settings.
   MissingSettings = Class.new(KeyError) { include Error }
 
+  # Public: Raised when a Banter::Command receives invalid arguments.
+  CommandArgumentError = Class.new(ArgumentError) { include Error }
+
   # Public: Raised when an error reply is received to query.
   class ErrorReply < StandardError
     include Error
