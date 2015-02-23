@@ -52,8 +52,8 @@ module Banter
     # message - An IRC::Message.
     #
     # Returns nil.
-    # Raises CommandArgumentError if the first argument is `"--help"` or not
-    # enough arguments were given.
+    # Raises CommandArgumentError if the first argument is `"--help"` ro `"-h".
+    # Raises CommandArgumentError if not enough arguments were given.
     def call(message)
       message.match(:privmsg, /^#{@command}($| .*$)/i) do |args|
         args = args.strip.split(/\s+/, max_args)
