@@ -42,6 +42,10 @@ module Banter
       @buffer = ""
 
       @settings.merge!(settings)
+      
+      unless @settings.key?(:prefix)
+        self[:prefix] = "!"
+      end
 
       yield(self) if block_given?
     end

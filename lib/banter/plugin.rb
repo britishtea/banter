@@ -1,3 +1,4 @@
+require "banter/command"
 require "banter/errors"
 require "irc/rfc2812/commands"
 require "irc/rfc2812/constants"
@@ -131,6 +132,70 @@ module Banter
         throw(:__matched__, yield(*@_args))
       end
     rescue UncaughtThrowError
+    end
+
+    # TODO: Should Banter::Plugin#command return the result of the block?
+
+    # Public: Executes its block if a message matches a typical irc command of
+    # the form `"!name argument argument"`. 
+    #
+    # The prefix is configurable. If the plugin setting `:plugin` is configured,
+    # it will be used as the prefix. If it's not configured, the network setting
+    # `:prefix` will be used. The network setting `:prefix` defaults to `"!"`.
+    #
+    # A help message is automatically generated from the description String and
+    # the block arguments. The help messages is sent as a PRIVMSG when the 
+    # command is invoked with `"--help"` or `"-h"` as its only argument.
+    #
+    # name        - The command name String.
+    # description - The command description String.
+    # block       - The command logic.
+    #
+    # Examples
+    #
+    #   command("slap", "Slaps a user") do |nickname, object = "trout"|
+    #     response = "slaps #{nickname} around a bit with a large #{object}"
+    #     privmsg message.target_channel, response
+    #   end
+    #
+    #   <britishtea> !slap --help"
+    #   <banter>     Slaps a user: !slap <nickname> [object]"
+    #   <britishtea> !slap
+    #   <banter>     Usage: !slap <nickname> [object]
+    #   <britishtea> !slap banter
+    #   <banter>     slaps banter around a bit with a large trout
+    def command(name, description = nil, &block)
+      return unless @_event == :receive
+
+      # Get ready, we're doing magic! Blocks are Procs by default, meaning they
+      # don't care about arguments at all. Give too few, give too much, a Proc
+      # doesn't care a bit. But we do, Command really, really wants a lambda! 
+      #
+      # Fortunately, lambdas also care about arguments. Give too few, exception!
+      # Give too much, exception! That's neat. Unfortunately, Procs can't really
+      # be converted to lambdas. `lambda(&block)` is a no-op, it happily returns
+      # one of those care-free Procs. That's not neat.
+      #
+      # So we're doing magic. If a Method is converted to a Proc, it becomes a
+      # lambda. So, to preserve `self` (this instance), we're creating a method
+      # on this plugin, "fake_proc", turn it into a Method object using
+      # Object#method and then turn that into a Proc using Method#to_proc. It'll
+      # return a lambda.
+      define_singleton_method(:fake_proc, &block)
+
+      prefix  = settings.fetch(:prefix, network[:prefix])
+      lambda  = method(:fake_proc).to_proc
+      command = Command.new(prefix, name, description, &lambda)
+      result  = command.call(@_args.first)
+
+      unless result.nil?
+        throw(:__matched__, result)
+      end
+    rescue CommandArgumentError => exception
+      privmsg @_args.first.params[0], exception.message
+    rescue UncaughtThrowError
+    ensure
+      # TODO: Remove our fake proc method.
     end
 
     # Public: Executes the plugin. All exceptions except Banter::Errors are

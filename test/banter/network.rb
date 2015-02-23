@@ -40,6 +40,10 @@ test "setting settings" do |network|
   assert_equal network[:a], "a"
 end
 
+test "has a default prefix setting" do |network|
+  assert_equal network[:prefix], "!"
+end
+
 
 # Plugins
 
