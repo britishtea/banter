@@ -15,6 +15,13 @@ prepare do
   $test           = nil
 end
 
+test "doesn't step on irc-helpers' toes" do |plugin|
+  commands_methods = IRC::RFC2812::Commands.instance_methods false
+  plugin_methods   = plugin.instance_methods false
+
+  assert_equal commands_methods - plugin_methods, commands_methods - [:raw]
+end
+
 test "defining a plugin" do |plugin|
   plugin.define "name", &$implementation
 end
@@ -78,51 +85,41 @@ test "getting the network" do |plugin|
   assert_equal plugin.network, $network
 end
 
-test "getting the settings" do |plugin|
-  assert plugin.settings.equal?($network[plugin.class])
 test "getting the message" do |plugin|
   assert_equal plugin.message, "args"
 end
+
+test "getting the settings" do |plugin|
+  assert plugin.settings.equal?($network[plugin.class])
 end
 
-test "required settings that are not set" do |plugin|
-  plugin.settings[:one] = "one"
-
-  assert_raise(Banter::MissingSettings) { plugin.required :one, :two }
-end
-
-test "required settings that are set" do |plugin|
+test "requiring settings" do |plugin|
   plugin.settings[:one] = "one"
   plugin.settings[:two] = "two"
 
+  assert plugin.required :one
   assert plugin.required :one, :two
+  
+  assert_raise(Banter::MissingSettings) { plugin.required :three }
+  assert_raise(Banter::MissingSettings) { plugin.required :three, :four }
 end
 
-test "default settings that are not set" do |plugin|
-  plugin.default :one => "one", :two => "two"
+test "defaulting settings" do |plugin|
+  plugin.settings[:one] = "ONE"
 
-  assert_equal plugin.settings.values_at(:one, :two), ["one", "two"]
+  plugin.default :one => "one"
+  plugin.default :two => "two", :three => "three"
+
+  assert_equal plugin.settings[:one], "ONE"
+  assert_equal plugin.settings[:two], "two"
+  assert_equal plugin.settings[:three], "three"
 end
 
-test "default settings that are set" do |plugin|
-  plugin.settings[:one], plugin.settings[:two] = "one", "two"
-  plugin.default :one => "ONE", :two => "TWO"
-
-  assert_equal plugin.settings.values_at(:one, :two), ["one", "two"]
-end
-
-test "running a block per event" do |plugin|
+test "events" do |plugin|
   plugin.event(:event)       { |*args| $test = [:event, args]  }
   plugin.event(:other_event) { |*args| $test = [:other_event, args] }
 
   assert_equal $test, [:event, ["args"]]
-end
-
-test "working with irc-helpers" do |plugin|
-  commands_methods = IRC::RFC2812::Commands.instance_methods false
-  plugin_methods   = Banter::Plugin.instance_methods false
-
-  assert_equal commands_methods - plugin_methods, commands_methods - [:raw]
 end
 
 test "sending messages to the network" do |plugin|
@@ -136,5 +133,3 @@ test "running another plugin" do |plugin|
 
   assert_equal $test, [:event, $network, "args"]
 end
-
-# TODO: cuba style on matchers (?), #reply, User and Channel helpers.
