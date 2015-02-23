@@ -130,7 +130,7 @@ module Banter
     end
 
     # TODO: Should Banter::Plugin#command return the result of the block?
-    
+
     # Public: Executes its block if a message matches a typical irc command of
     # the form `"!name argument argument"`. 
     #
@@ -160,9 +160,7 @@ module Banter
     #   <britishtea> !slap banter
     #   <banter>     slaps banter around a bit with a large trout
     def command(name, description = nil, &block)
-      unless @_event == :receive && @_args.first.command == :privmsg
-        return
-      end
+      return unless @_event == :receive
 
       # Get ready, we're doing magic! Blocks are Procs by default, meaning they
       # don't care about arguments at all. Give too few, give too much, a Proc

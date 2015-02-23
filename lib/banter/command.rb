@@ -49,29 +49,25 @@ module Banter
 
     # Public: Executes the command if the given message matches.
     #
-    # message - An object responding to #to_s.
+    # message - An IRC::Message.
     #
     # Returns nil.
     # Raises CommandArgumentError if the first argument is `"--help"` or not
     # enough arguments were given.
     def call(message)
-      message = message.to_s.dup
+      message.match(:privmsg, /^#{@command}($| .*$)/i) do |args|
+        args = args.strip.split(/\s+/, max_args)
 
-      unless message.downcase.start_with?(@command)
-        return nil
+        if help?(args)
+          raise CommandArgumentError, help
+        elsif insufficient_args?(args)
+          raise CommandArgumentError, "Usage: #{usage}"
+        else
+          return @block.call(*args)
+        end
       end
 
-      message.slice!(0, @command.size)
-
-      args = message.strip.split(/\s+/, max_args)
-
-      if help?(args)
-        raise CommandArgumentError, help
-      elsif insufficient_args?(args)
-        raise CommandArgumentError, "Usage: #{usage}"
-      else
-        return @block.call(*args)
-      end
+      return nil
     end
 
     private
