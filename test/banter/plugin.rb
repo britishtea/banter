@@ -1,6 +1,7 @@
 require_relative "../test_helper"
 require "banter/plugin"
 require "banter/network"
+require "irc/rfc2812/message"
 
 setup { Banter::Plugin }
 
@@ -63,6 +64,9 @@ end
 
 test "getting the settings" do |plugin|
   assert plugin.settings.equal?($network[plugin.class])
+test "getting the message" do |plugin|
+  assert_equal plugin.message, "args"
+end
 end
 
 test "required settings that are not set" do |plugin|

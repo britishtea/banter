@@ -72,6 +72,11 @@ module Banter
       @_network
     end
 
+    # Public: Gets the IRC::Message.
+    def message
+      @_args.first
+    end
+
     # Public: Gets the plugin settings ThreadSafe::Hash.
     def settings
       self.network[self.class]
