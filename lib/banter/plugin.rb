@@ -213,8 +213,12 @@ module Banter
       raise
     end
 
-    def run(plugin)
-      plugin.call @_event, self.network, *@_args
+    # Public: Runs another plugin.
+    #
+    # plugin - A plugin (object responding to #call).
+    # args   - Arguments to pass in (default: @_args).
+    def run(plugin, args = @_args)
+      plugin.call @_event, self.network, *args
     end
 
     # Public: Pushes messages onto the network queue. This method is also used

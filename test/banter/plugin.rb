@@ -132,4 +132,7 @@ test "running another plugin" do |plugin|
   plugin.run $implementation
 
   assert_equal $test, [:event, $network, "args"]
+
+  plugin.run $implementation, ["ARGS"]
+  assert_equal $test, [:event, $network, "ARGS"]
 end
