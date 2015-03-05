@@ -164,7 +164,7 @@ module Banter
     #   <banter>     Usage: !slap <nickname> [object]
     #   <britishtea> !slap banter
     #   <banter>     slaps banter around a bit with a large trout
-    def command(name, description = nil, &block)
+    def command(name, description = "Usage", &block)
       return unless @_event == :receive
 
       # Get ready, we're doing magic! Blocks are Procs by default, meaning they

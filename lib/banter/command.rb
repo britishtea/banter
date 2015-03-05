@@ -11,7 +11,7 @@ module Banter
     # lambda      - A lambda, it can only take required or optional arguments.
     #
     # Raises ArgumentError if `lambda` isn't a lambda.
-    def initialize(prefix, name, description = nil, &lambda)
+    def initialize(prefix, name, description, &lambda)
       unless lambda.lambda?
         raise ArgumentError, "no lambda given"
       end
