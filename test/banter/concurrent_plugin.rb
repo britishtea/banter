@@ -8,7 +8,7 @@ Thread.abort_on_exception = true
 class Plugin < Banter::Plugin
   extend Banter::Plugin::Concurrent
 
-  define("name") do
+  define do
     if network.equal?($network)
       $test += 1
     else
@@ -27,7 +27,7 @@ prepare do
 end
 
 test "waits for thread to finish when registered" do |plugin|
-  plugin.define("name") { $test += 1 }
+  plugin.define { $test += 1 }
   plugin.call(:register, $network)
 
   assert_equal $test, 1
@@ -52,7 +52,7 @@ test "finishes running plugins when disconnected" do |plugin|
 end
 
 test "raises exceptions" do |plugin|
-  plugin.define("name") { raise "an exception" }
+  plugin.define { raise "an exception" }
   $stderr = StringIO.new # Make the test less noisy
   
   assert_raise(RuntimeError) do

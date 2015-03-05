@@ -41,11 +41,8 @@ module Banter
       end
     end
 
-    def self.name;  @name;  end
-    def self.usage; @usage; end
-
-    def self.define(name, usage = nil, &block)
-      @name, @usage, @block = name, usage, block
+    def self.define(&block)
+      @block = block
     end
 
     # Public: Creates a new plugin and calls it.

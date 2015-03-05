@@ -23,33 +23,11 @@ test "doesn't step on irc-helpers' toes" do |plugin|
 end
 
 test "defining a plugin" do |plugin|
-  plugin.define "name", &$implementation
-end
-
-test "defining a plugin with a usage String" do |plugin|
-  plugin.define "name", "usage", &$implementation
-end
-
-test "getting the plugin name" do |plugin|
-  plugin.define "name", &$implementation
-
-  assert_equal plugin.name, "name"
-end
-
-test "getting the usage String from a plugin without usage String" do |plugin|
-  plugin.define "name", &$implementation
-
-  assert_equal plugin.usage, nil
-end
-
-test "getting the usage String from a plugin with usage String" do |plugin|
-  plugin.define "name", "usage", &$implementation
-
-  assert_equal plugin.usage, "usage"
+  plugin.define &$implementation
 end
 
 test "executing a plugin" do |plugin|
-  plugin.define "name", "usage", &$implementation
+  plugin.define &$implementation
   plugin.call :event, "network", "message"
 
   assert_equal $test, ["message"]
@@ -58,7 +36,7 @@ end
 test "executing a plugin that raises an exception" do |plugin|
   implementation = proc { |*args| raise Banter::MissingSettings }
   
-  plugin.define "name", "usage", &implementation
+  plugin.define &implementation
 
   assert_raise Banter::MissingSettings do 
     plugin.call :event, "network", "message"
@@ -67,7 +45,7 @@ end
 
 test "replying to PRIVMSGs" do |plugin|
   $network.define_singleton_method(:<<) { |msg| $test = msg }
-  plugin.define("name", "usage") { reply "reply" }
+  plugin.define { reply "reply" }
 
   plugin.call(:send, $network, msg("PRIVMSG target :message"))
   assert_equal $test, nil

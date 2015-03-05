@@ -8,7 +8,7 @@ def msg(message)
 end
 
 setup do
-  Banter::Plugin.define "name" do
+  Banter::Plugin.define do
     command "name", "Description" do |required, optional = nil|
       $test = [required, optional]
     end
@@ -89,7 +89,7 @@ test "sends help message if invoked with --help or -h" do |plugin|
 end
 
 test "has access to the plugin instance" do |plugin|
-  plugin.define "name" do
+  plugin.define do
     command("name", "Description") { $test = self }
   end
 
