@@ -7,10 +7,12 @@ def msg(message)
 end
 
 setup do
-  lambda = lambda { |req, opt = nil| [req, opt] }
+  lambda = lambda { |req, opt = nil| $test = [req, opt] }
   
   Banter::Command.new("!", "name", "Description", &lambda)
 end
+
+prepare { $test = nil }
 
 test "usage" do |command|
   assert_equal command.usage, "!name <req> [opt]"
@@ -22,22 +24,22 @@ end
 
 test "ignores normal messages" do |command|
   message = msg("PRIVMSG target :normal message")
-  assert_equal nil, command.call(message)
+  assert_equal false, command.call(message)
 end
 
 test "ignores other commands" do |command|
   message = msg("PRIVMSG target :!names req")
-  assert_equal nil, command.call(message)
+  assert_equal false, command.call(message)
 end
 
 test "ignores other prefixes" do |command|
   message = msg("PRIVMSG target :@name req")
-  assert_equal nil, command.call(message)
+  assert_equal false, command.call(message)
 end
 
 test "starts from the beginning" do |command|
   message = msg("PRIVMSG target :Just type !name req")
-  assert_equal nil, command.call(message)
+  assert_equal false, command.call(message)
 end
 
 test "call with --help as argument" do |command|
@@ -66,20 +68,28 @@ end
 
 test "call with enough arguments" do |command|
   message = msg("PRIVMSG target :!name req")
-  assert_equal ["req", nil], command.call(message)
+
+  assert_equal true, command.call(message)
+  assert_equal ["req", nil], $test
 end
 
 test "call with optional arguments" do |command|
   message = msg("PRIVMSG target :!name req opt")
-  assert_equal ["req", "opt"], command.call(message)
+
+  assert_equal true, command.call(message)
+  assert_equal ["req", "opt"], $test
 end
 
 test "call with too much arguments" do |command|
   message = msg("PRIVMSG target :!name req opt 1 2")
-  assert_equal ["req", "opt 1 2"], command.call(message)
+
+  assert_equal true, command.call(message)
+  assert_equal ["req", "opt 1 2"], $test
 end
 
 test "call with different case" do |command|
   message = msg("PRIVMSG target :!NAmE req opt")
-  assert_equal ["req", "opt"], command.call(message)
+
+  assert_equal true, command.call(message)
+  assert_equal ["req", "opt"], $test
 end

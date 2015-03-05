@@ -51,7 +51,7 @@ module Banter
     #
     # message - An IRC::Message.
     #
-    # Returns nil.
+    # Returns true is the command was executed, false otherwise.
     # Raises CommandArgumentError if the first argument is `"--help"` ro `"-h".
     # Raises CommandArgumentError if not enough arguments were given.
     def call(message)
@@ -62,12 +62,14 @@ module Banter
           raise CommandArgumentError, help
         elsif insufficient_args?(args)
           raise CommandArgumentError, "Usage: #{usage}"
-        else
-          return @block.call(*args)
         end
+        
+        @block.call(*args)
+
+        return true
       end
 
-      return nil
+      return false
     end
 
     private

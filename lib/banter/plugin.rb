@@ -188,7 +188,7 @@ module Banter
       command = Command.new(prefix, name, description, &lambda)
       result  = command.call(@_args.first)
 
-      unless result.nil?
+      if result
         throw(:__matched__, result)
       end
     rescue CommandArgumentError => exception
