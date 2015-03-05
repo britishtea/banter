@@ -193,6 +193,8 @@ module Banter
       end
     rescue CommandArgumentError => exception
       privmsg @_args.first.params[0], exception.message
+
+      throw(:__matched__)
     rescue UncaughtThrowError
     ensure
       # TODO: Remove our fake proc method.

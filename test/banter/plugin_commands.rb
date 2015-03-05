@@ -12,6 +12,10 @@ setup do
     command "name", "Description" do |required, optional = nil|
       $test = [required, optional]
     end
+
+    command "name", "Description" do |required, optional = nil|
+      $test = false
+    end
   end
 
   Banter::Plugin
@@ -50,6 +54,13 @@ test "only runs when the IRC command is PRIVMSG" do |plugin|
   plugin.call(:receive, $network, message)
 
   assert_equal $test, nil
+end
+
+test "only runs the first matching command" do |plugin|
+  message = msg("PRIVMSG target :#{$prefix}name req opt")
+  plugin.call(:receive, $network, message)
+
+  assert_equal $test, ["req", "opt"]
 end
 
 test "sends usage if invoked improperly" do |plugin|
